@@ -14,7 +14,8 @@ namespace EmailSender
         public int Overdue_Days { get; set; }
         public int InvoiceTango { get; set; }
         public DateTime InvoiceDate { get; set; }
-        public string InvoiceAmount { get; set; }
+        public string OurReference { get; set; }
+        public decimal InvoiceAmount { get; set; }
         public string Currency { get; set; }
     }
 }

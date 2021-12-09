@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
+using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -96,7 +98,7 @@ namespace EmailSender
                     }
                 }
             }
-            if (DateTime.Now.Day == 7 || DateTime.Now.Day == 15)
+            if (DateTime.Now.Day == 9 || DateTime.Now.Day == 15)
             {
                 SendEmailOverdue(emailTemplateOverdue, listSameAccount, EmailAddress, clientName);
             }
@@ -145,18 +147,26 @@ namespace EmailSender
         {
             try
             {
+                decimal total = 0;
                 string InvoicesRows = "";
                 string bodyMessage = "";
+                string Currency = "";
+                string logo = Directory.GetCurrentDirectory() + "\\MIP_Logo_RGB_6000px_9.png";
                 foreach (var invoice in invoiceList)
                 {
-                    InvoicesRows += $"<tr><td>{invoice.InvoiceTango}</td>" +
-                        $"<td>{invoice.InvoiceDate.ToString("MM/dd/yyyy")}</td>" +
-                        $"<td>{invoice.Currency} {invoice.InvoiceAmount}</td>" +
-                        $"<td>{invoice.Overdue_Days}</td></tr>";
+                    InvoicesRows += $"<tr><td class='invoice'>{invoice.InvoiceTango}</td>" +
+                        $"<td class='invoice'>{invoice.OurReference}</td>" +
+                        $"<td class='invoice'>{invoice.InvoiceDate.ToString("MM/dd/yyyy")}</td>" +
+                        $"<td class='invoice'>{invoice.Overdue_Days}</td>" +
+                        $"<td class='invoice'>{invoice.Currency} {invoice.InvoiceAmount}</td></tr>";
+                    total  += invoice.InvoiceAmount;
+                    Currency = invoice.Currency;
                 }
-                bodyMessage = template.TemplateText.Replace("{xx_CLIENT_NAME}", ClientName).Replace("{xx_Inovoices_rows}",InvoicesRows);
+                
+                bodyMessage = template.TemplateText.Replace("{xx_CLIENT_NAME}", ClientName).Replace("{xx_Inovoices_rows}",InvoicesRows).Replace("{xx_TOTAL}",Currency + " " +total.ToString());
                 //reemplazo el formato de comas que viene de sql para que el mail distinga varios destinatarios
-                EmailAdress = "gabriel.biasella@moellerip.com; mariana.volpi@moellerip.com;";
+                EmailAdress = "julian.perez@moellerip.com";
+                //EmailAdress = "gabriel.biasella@moellerip.com; mariana.volpi@moellerip.com";
                 EmailAdress = EmailAdress.Replace(',', ';');
                 MailMessage message = new MailMessage();
                 SmtpClient smtp = new SmtpClient();
@@ -167,9 +177,14 @@ namespace EmailSender
                 }
                 message.Subject = template.SubjectText;
                 message.IsBodyHtml = true; //to make message body as html  
-                message.Body = bodyMessage;
+                var htmlView = AlternateView.CreateAlternateViewFromString(bodyMessage, Encoding.UTF8, MediaTypeNames.Text.Html);
+                var imgRes = new LinkedResource(logo, MediaTypeNames.Image.Jpeg);
+                imgRes.ContentId = "{xx_LOGO}";
+                imgRes.TransferEncoding = TransferEncoding.Base64;
+                htmlView.LinkedResources.Add(imgRes);
+                message.AlternateViews.Add(htmlView);
                 smtp.Port = 587;
-                smtp.Host = "smtp.office365.com"; //for gmail host  
+                smtp.Host = "smtp.office365.com";
                 smtp.EnableSsl = true;
                 smtp.UseDefaultCredentials = false;
                 smtp.Credentials = new NetworkCredential("no-reply@moellerip.com", "Pent$xeR44)T9");

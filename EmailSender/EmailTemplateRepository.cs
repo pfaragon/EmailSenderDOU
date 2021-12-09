@@ -80,9 +80,10 @@ namespace EmailSender
                                 invoice.Overdue_Days = (int)sdr["OVERDUE_DAYS"];
                                 invoice.Email = sdr["EmailSender"] == DBNull.Value ? "" : sdr["EmailSender"].ToString();
                                 invoice.InvoiceTango = sdr["INVOICE_TANGO"] == DBNull.Value ? (int)sdr["INVOICE_PATRICIA"] : (int)sdr["INVOICE_TANGO"];
-                                invoice.InvoiceAmount = sdr["INVOICE_AMOUNT"].ToString();
+                                invoice.InvoiceAmount = (decimal)sdr["INVOICE_AMOUNT"];
                                 invoice.InvoiceDate = (DateTime)sdr["INVOICE_DATE"];
                                 invoice.Currency = sdr["CURRENCY"].ToString();
+                                invoice.OurReference = sdr["CASE_NUMBER"].ToString();
                                 invoiceList.Add(invoice);
                             }
                         }
