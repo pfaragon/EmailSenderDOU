@@ -17,7 +17,7 @@ namespace EmailSender
         static void Main(string[] args)
         {
             string connection = getConnection();
-            EmailTemplateRepository templateRepository = new EmailTemplateRepository("Data Source=WS_603;Initial Catalog=Patricia_MoellerIp;Integrated Security=True");
+            EmailTemplateRepository templateRepository = new EmailTemplateRepository(connection);
             EmailTemplate emailTemplateReminder = templateRepository.GetTemplate("sp_moe_0011_Reminder_EmailTemplate");
             EmailTemplate emailTemplateOverdue = templateRepository.GetTemplate("sp_moe_0012_Overdue_Days_EmailTemplate");
 
@@ -98,7 +98,7 @@ namespace EmailSender
                     }
                 }
             }
-            if (DateTime.Now.Day == 9 || DateTime.Now.Day == 15)
+            if (DateTime.Now.Day == 1 || DateTime.Now.Day == 15)
             {
                 SendEmailOverdue(emailTemplateOverdue, listSameAccount, EmailAddress, clientName);
                 repository.InvoiceEmailLog(clientName);
@@ -119,7 +119,7 @@ namespace EmailSender
                 string logo = Directory.GetCurrentDirectory() + "\\MIP_Logo_RGB_6000px_9.png";
                 //reemplazo el formato de comas que viene de sql para que el mail distinga varios destinatarios
                 invoice.Email = invoice.Email.Replace(',', ';');
-                invoice.Email = "julian.perez@moellerip.com";
+                invoice.Email = "paula.gonzalez@moellerip.com";
                 bodyMessage = bodyMessage.Replace("{xx_CLIENT_NAME}", invoice.AccountName)
                     .Replace("{xx_INVOICE#}", invoice.InvoiceTango.ToString())
                     .Replace("{xx_INVOICE_AMOUNT}", invoice.Currency+" "+invoice.InvoiceAmount);
@@ -174,7 +174,7 @@ namespace EmailSender
                 
                 bodyMessage = template.TemplateText.Replace("{xx_CLIENT_NAME}", ClientName).Replace("{xx_Inovoices_rows}",InvoicesRows).Replace("{xx_TOTAL}",Currency + " " +total.ToString());
                 //reemplazo el formato de comas que viene de sql para que el mail distinga varios destinatarios
-                EmailAdress = "julian.perez@moellerip.com";
+                EmailAdress = "paula.gonzalez@moellerip.com";
                 //EmailAdress = "gabriel.biasella@moellerip.com; mariana.volpi@moellerip.com";
                 EmailAdress = EmailAdress.Replace(',', ';');
                 MailMessage message = new MailMessage();
