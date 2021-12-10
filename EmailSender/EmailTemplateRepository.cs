@@ -43,6 +43,7 @@ namespace EmailSender
                     }
                     catch (Exception ex)
                     {
+                        Console.WriteLine(ex.Message);
                         throw ex;
                     }
                     finally
@@ -88,6 +89,7 @@ namespace EmailSender
                     }
                     catch (Exception ex)
                     {
+                        Console.WriteLine(ex.Message);
                         throw ex;
                     }
                     finally
@@ -116,7 +118,8 @@ namespace EmailSender
                     }
                     catch (Exception ex)
                     {
-
+                        Console.WriteLine(ex.Message);
+                        throw ex;
                     }
                     finally
                     {

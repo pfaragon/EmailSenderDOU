@@ -18,8 +18,10 @@ namespace EmailSender
         {
             string connection = getConnection();
             EmailTemplateRepository templateRepository = new EmailTemplateRepository(connection);
+            Console.WriteLine("Conexion creada");
             EmailTemplate emailTemplateReminder = templateRepository.GetTemplate("sp_moe_0011_Reminder_EmailTemplate");
             EmailTemplate emailTemplateOverdue = templateRepository.GetTemplate("sp_moe_0012_Overdue_Days_EmailTemplate");
+            Console.WriteLine("template obtenidos");
 
             //para usar el template que corresponda en base a si es reminder o si ya se vencio.
             List<InvoiceMail> emailList = templateRepository.GetInvoices();
@@ -98,7 +100,7 @@ namespace EmailSender
                     }
                 }
             }
-            if (DateTime.Now.Day == 12 || DateTime.Now.Day == 15)
+            if (DateTime.Now.Day == 10 || DateTime.Now.Day == 12)
             {
                 SendEmailOverdue(emailTemplateOverdue, listSameAccount, EmailAddress, clientName);
                 repository.InvoiceEmailLog(clientName);
@@ -116,7 +118,6 @@ namespace EmailSender
             try
             {
                 string bodyMessage = template.TemplateText;
-                string logo = Directory.GetCurrentDirectory() + "\\MIP_Logo_RGB_6000px_9.png";
                 //reemplazo el formato de comas que viene de sql para que el mail distinga varios destinatarios
                 invoice.Email = invoice.Email.Replace(',', ';');
                 invoice.Email = "paula.gonzalez@moellerip.com";
@@ -132,13 +133,7 @@ namespace EmailSender
                 }
                 message.Subject = template.SubjectText;
                 message.IsBodyHtml = true; //to make message body as html  
-                var htmlView = AlternateView.CreateAlternateViewFromString(bodyMessage, Encoding.UTF8, MediaTypeNames.Text.Html);
-                var imgRes = new LinkedResource(logo, MediaTypeNames.Image.Jpeg);
-                imgRes.ContentId = "{xx_LOGO}";
-                imgRes.TransferEncoding = TransferEncoding.Base64;
-                htmlView.LinkedResources.Add(imgRes);
-                message.AlternateViews.Add(htmlView);
-                //message.Body = bodyMessage;
+                message.Body = bodyMessage;
                 smtp.Port = 587;
                 smtp.Host = "smtp.office365.com";
                 smtp.EnableSsl = true;
@@ -160,7 +155,6 @@ namespace EmailSender
                 string InvoicesRows = "";
                 string bodyMessage = "";
                 string Currency = "";
-                string logo = Directory.GetCurrentDirectory() + "\\MIP_Logo_RGB_6000px_9.png";
                 foreach (var invoice in invoiceList)
                 {
                     InvoicesRows += $"<tr><td class='invoice'>{invoice.InvoiceTango}</td>" +
@@ -174,8 +168,8 @@ namespace EmailSender
                 
                 bodyMessage = template.TemplateText.Replace("{xx_CLIENT_NAME}", ClientName).Replace("{xx_Inovoices_rows}",InvoicesRows).Replace("{xx_TOTAL}",Currency + " " +total.ToString());
                 //reemplazo el formato de comas que viene de sql para que el mail distinga varios destinatarios
-                EmailAdress = "julian.perez@moellerip.com";
-                //EmailAdress = "paula.gonzalez@moellerip.com";
+                //EmailAdress = "julian.perez@moellerip.com";
+                EmailAdress = "paula.gonzalez@moellerip.com";
                 //EmailAdress = "gabriel.biasella@moellerip.com; mariana.volpi@moellerip.com";
                 EmailAdress = EmailAdress.Replace(',', ';');
                 MailMessage message = new MailMessage();
@@ -187,12 +181,7 @@ namespace EmailSender
                 }
                 message.Subject = template.SubjectText;
                 message.IsBodyHtml = true; //to make message body as html  
-                var htmlView = AlternateView.CreateAlternateViewFromString(bodyMessage, Encoding.UTF8, MediaTypeNames.Text.Html);
-                var imgRes = new LinkedResource(logo, MediaTypeNames.Image.Jpeg);
-                imgRes.ContentId = "{xx_LOGO}";
-                imgRes.TransferEncoding = TransferEncoding.Base64;
-                htmlView.LinkedResources.Add(imgRes);
-                message.AlternateViews.Add(htmlView);
+                message.Body = bodyMessage;
                 smtp.Port = 587;
                 smtp.Host = "smtp.office365.com";
                 smtp.EnableSsl = true;

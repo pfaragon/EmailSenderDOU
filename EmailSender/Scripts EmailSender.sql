@@ -89,7 +89,7 @@ values (12,'CON', 'More - Overdue days','<html>
                                             <div style="margin:0px; padding:0px 7px">
                                                 <div style="margin:0px; clear:both">
                                                     <p style="margin:0px; font-weight:normal; font-kerning:none; color:windowtext; text-align:left">
-                                                            <img src="{xx_LOGO}" width="176px"  height="45px" style="width:176px; height:45px;"/>
+                                                            <img src="http://www.moellerip-more.com/Images/More/MIP_Logo_RGB_6000px_9.png" width="176px"  height="45px" style="width:176px; height:45px;"/>
                                                         </p>
                                                     </div>
                                                 </div>
@@ -220,14 +220,6 @@ values (13,'CON', 'More - Reminder','<html>
             -ms-text-size-adjust: 100%;
         }
 
-        .invoice{
-            mso-table-lspace: 0pt !important;
-            mso-table-rspace: 0pt !important;
-            padding: 10px;
-            border: 2px solid #E2E2E2;
-            text-align: center;
-        }
-
         img {
             -ms-interpolation-mode: bicubic;
         }
@@ -242,32 +234,14 @@ values (13,'CON', 'More - Reminder','<html>
     <div style="margin-top: 10px; padding: 20px;">
         <p> Dear {xx_CLIENT_NAME}, </p>
         <p> I hope this email finds you well. </p>
-        <p> According to our records, the invoices listed below have not been settled, and are now overdue. </p>
-        <table class="invoice" style="width: 95%; border-collapse: collapse; margin: 0; border: 2px solid #E2E2E2; border-radius: 5px; color: #646464; background: white; font-weight: normal;">
-            <tr>
-                <td class="invoice" style=" font-size:20px; font-weight:bold; text-align:center;"> INVOICE NUMBER </td>
-                <td class="invoice" style=" font-size:20px; font-weight:bold; text-align:center;"> OUR REF. </td>
-                <td class="invoice" style=" font-size:20px; font-weight:bold; text-align:center;"> INVOICE DATE </td>
-                <td class="invoice" style=" font-size:20px; font-weight:bold; text-align:center;"> DAYS PAST-DUE DATE </td>
-                <td class="invoice" style=" font-size:20px; font-weight:bold; text-align:center;"> INVOICE AMOUNT </td>
-            </tr>
-            {xx_Inovoices_rows}
-            <tr>
-                <td colspan="3"></td>
-                <td class="invoice">Total</td>
-                <td class="invoice">{xx_TOTAL}</td>
-            </tr>
-        </table> 
-        <em style="font-size: 15px;"> *Please notice that there might exist other invoices that are not due yet. </em>
-        <br />
-        <p> We have done our best and professional work managing your case at the most reasonable price. </p>
-        <p> We understand that all our invoices were correctly accepted by you as we have not received any rejection notice and we have handled your cases with responsibility and professionalism. </p>
-        <p> Please notice that our fees were calculated with the assumption that our invoice were going to be cancelled on due date. We ask you, please, to cancel our invoices in the next business days. </p>
-        <p> Thank you for understanding and always answering promptly. </p>
+        <p> We just want to let you know that the invoice {xx_INVOICE#} amunting to {xx_INVOICE_AMOUNT} is near to due.  </p>
+        <p> We understand that the invoice was correctly accepted by you as we have not received any rejection notice and we have handled your cases with responsibility and professionalism. </p>
+        <p> Should you not be the responsible person for this matter, we kindly ask you to forward this email to the corresponding person and/or department in your firm, copying us, so we can update our database and avoid sending you this sort of emails in the future.  </p>
+        <p> If you have paid the abovementioned invoice during the last week, please disregard this automatic email. </p>
+        <p> Thank you for time. </p>
         <p> Kind regards, </p>
-
     </div>
-    <table  style="margin:0px; table-layout:fixed; width:0px; border-collapse:collapse; color:rgb(0,0,0); font-family:Segoe UI,Segoe UI Web,Arial,Verdana,sans-serif; font-size:12px; text-align:start; background:transparent; border-spacing:0px">
+    <table style="margin:0px; table-layout:fixed; width:0px; border-collapse:collapse; color:rgb(0,0,0); font-family:Segoe UI,Segoe UI Web,Arial,Verdana,sans-serif; font-size:12px; text-align:start; background:transparent; border-spacing:0px">
         <tbody style="margin:0px">
             <tr style="margin:0px; height:93px">
                 <td style="margin:0px; vertical-align:top; border-width:0px; border-style:none; width:666px">
@@ -286,7 +260,7 @@ values (13,'CON', 'More - Reminder','<html>
                                             <div style="margin:0px; padding:0px 7px">
                                                 <div style="margin:0px; clear:both">
                                                     <p style="margin:0px; font-weight:normal; font-kerning:none; color:windowtext; text-align:left">
-                                                            <img src="{xx_LOGO}" width="176px"  height="45px" style="width:176px; height:45px;"/>
+                                                            <img src="http://www.moellerip-more.com/Images/More/MIP_Logo_RGB_6000px_9.png" width="176px"  height="45px" style="width:176px; height:45px;"/>
                                                         </p>
                                                     </div>
                                                 </div>
@@ -409,7 +383,7 @@ CREATE TABLE [dbo].[INVOICE_OVERDUE_EMAIL_LOG](
  CONSTRAINT [PK_INVOICE_OVERDUE_EMAIL_LOG] PRIMARY KEY CLUSTERED 
 (
 	[INVOICE_OVERDUE_LOG_ID] ASC
-)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
 
