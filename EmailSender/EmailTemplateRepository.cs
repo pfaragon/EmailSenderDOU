@@ -17,7 +17,6 @@ namespace EmailSender
         }
         public EmailTemplate GetTemplate(string spTemplate)
         {
-            string _connectionString = "Data Source=WS_603;Initial Catalog=Patricia_MoellerIp;Integrated Security=True";
             EmailTemplate EmailTemplate = new EmailTemplate();
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
@@ -59,12 +58,11 @@ namespace EmailSender
 
         public List<InvoiceMail> GetInvoices()
         {
-            string _connectionString = "Data Source=WS_603;Initial Catalog=Patricia_MoellerIp;Integrated Security=True";
             List<InvoiceMail> invoiceList = new List<InvoiceMail>();
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
-                using (SqlCommand command = new SqlCommand("sp_moe_prueba_GetMails", connection))
+                using (SqlCommand command = new SqlCommand("sp_moe_GetMails_Overdue_Days", connection))
                 {
                     try
                     {
@@ -101,6 +99,33 @@ namespace EmailSender
                 }
             }
             return invoiceList;
+        }
+        
+        public void InvoiceEmailLog(string ClientName)
+        {
+            using(SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                using (SqlCommand command = new SqlCommand("RegisterInvoiceOverdueLog", connection))
+                {
+                    try
+                    {
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.Parameters.AddWithValue("@Client_Name", ClientName);
+                        command.ExecuteNonQuery();
+                    }
+                    catch (Exception ex)
+                    {
+
+                    }
+                    finally
+                    {
+                        command.Dispose();
+                        connection.Close();
+                        connection.Dispose();
+                    }
+                }
+            }
         }
     }
 }

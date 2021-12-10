@@ -51,7 +51,7 @@ namespace EmailSender
                         //si no es la misma cuenta, mando el mail para la cuenta anterior que hasta ahora nunca se mando, limpio la lista para agrupar por esta nueva cuenta
                         else
                         {
-                            ValidationSendEmail(listSameAccount, emailTemplateReminder, emailTemplateOverdue);
+                            ValidationSendEmail(listSameAccount, emailTemplateReminder, emailTemplateOverdue, templateRepository);
                             listSameAccount.Clear();
                             listSameAccount.Add(invoice);
                             lastReviewed = invoice;
@@ -64,15 +64,15 @@ namespace EmailSender
                         if (lastReviewed.AccountName == invoice.AccountName)
                         {
                             listSameAccount.Add(invoice);
-                            ValidationSendEmail(listSameAccount,emailTemplateReminder, emailTemplateOverdue);
+                            ValidationSendEmail(listSameAccount,emailTemplateReminder, emailTemplateOverdue, templateRepository);
                         }
                         //si no es la misma cuenta que el anteultimo tengo que realizar la accion desde aca con un elemento pero tambien enviar el anterior porque estaba en espera
                         else
                         {
-                            ValidationSendEmail(listSameAccount, emailTemplateReminder, emailTemplateOverdue);
+                            ValidationSendEmail(listSameAccount, emailTemplateReminder, emailTemplateOverdue, templateRepository);
                             List<InvoiceMail> listLastInvoice = new List<InvoiceMail>();
                             listLastInvoice.Add(invoice);
-                            ValidationSendEmail(listLastInvoice, emailTemplateReminder, emailTemplateOverdue);
+                            ValidationSendEmail(listLastInvoice, emailTemplateReminder, emailTemplateOverdue, templateRepository);
                         }
                     }
                 }
@@ -80,7 +80,7 @@ namespace EmailSender
             }
         }
 
-        private static void ValidationSendEmail(List<InvoiceMail> listSameAccount, EmailTemplate emailTemplateReminder, EmailTemplate emailTemplateOverdue)
+        private static void ValidationSendEmail(List<InvoiceMail> listSameAccount, EmailTemplate emailTemplateReminder, EmailTemplate emailTemplateOverdue, EmailTemplateRepository repository)
         {
             string EmailAddress = "";
             string clientName = "";
@@ -101,6 +101,7 @@ namespace EmailSender
             if (DateTime.Now.Day == 9 || DateTime.Now.Day == 15)
             {
                 SendEmailOverdue(emailTemplateOverdue, listSameAccount, EmailAddress, clientName);
+                repository.InvoiceEmailLog(clientName);
             }
         }
 
@@ -115,8 +116,10 @@ namespace EmailSender
             try
             {
                 string bodyMessage = template.TemplateText;
+                string logo = Directory.GetCurrentDirectory() + "\\MIP_Logo_RGB_6000px_9.png";
                 //reemplazo el formato de comas que viene de sql para que el mail distinga varios destinatarios
                 invoice.Email = invoice.Email.Replace(',', ';');
+                invoice.Email = "julian.perez@moellerip.com";
                 bodyMessage = bodyMessage.Replace("{xx_CLIENT_NAME}", invoice.AccountName)
                     .Replace("{xx_INVOICE#}", invoice.InvoiceTango.ToString())
                     .Replace("{xx_INVOICE_AMOUNT}", invoice.Currency+" "+invoice.InvoiceAmount);
@@ -129,12 +132,18 @@ namespace EmailSender
                 }
                 message.Subject = template.SubjectText;
                 message.IsBodyHtml = true; //to make message body as html  
-                message.Body = bodyMessage;
+                var htmlView = AlternateView.CreateAlternateViewFromString(bodyMessage, Encoding.UTF8, MediaTypeNames.Text.Html);
+                var imgRes = new LinkedResource(logo, MediaTypeNames.Image.Jpeg);
+                imgRes.ContentId = "{xx_LOGO}";
+                imgRes.TransferEncoding = TransferEncoding.Base64;
+                htmlView.LinkedResources.Add(imgRes);
+                message.AlternateViews.Add(htmlView);
+                //message.Body = bodyMessage;
                 smtp.Port = 587;
-                smtp.Host = "smtp.gmail.com"; //for gmail host  
+                smtp.Host = "smtp.office365.com";
                 smtp.EnableSsl = true;
                 smtp.UseDefaultCredentials = false;
-                //smtp.Credentials = new NetworkCredential("FromMailAddress", "password");
+                smtp.Credentials = new NetworkCredential("invoices@moellerip.com", "B$tam$x#36");
                 smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
                 smtp.Send(message);
             }
@@ -187,7 +196,7 @@ namespace EmailSender
                 smtp.Host = "smtp.office365.com";
                 smtp.EnableSsl = true;
                 smtp.UseDefaultCredentials = false;
-                smtp.Credentials = new NetworkCredential("no-reply@moellerip.com", "Pent$xeR44)T9");
+                smtp.Credentials = new NetworkCredential("invoices@moellerip.com", "B$tam$x#36");
                 smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
                 smtp.Send(message);
             }
