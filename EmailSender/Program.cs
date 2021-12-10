@@ -98,7 +98,7 @@ namespace EmailSender
                     }
                 }
             }
-            if (DateTime.Now.Day == 1 || DateTime.Now.Day == 15)
+            if (DateTime.Now.Day == 12 || DateTime.Now.Day == 15)
             {
                 SendEmailOverdue(emailTemplateOverdue, listSameAccount, EmailAddress, clientName);
                 repository.InvoiceEmailLog(clientName);
@@ -174,7 +174,8 @@ namespace EmailSender
                 
                 bodyMessage = template.TemplateText.Replace("{xx_CLIENT_NAME}", ClientName).Replace("{xx_Inovoices_rows}",InvoicesRows).Replace("{xx_TOTAL}",Currency + " " +total.ToString());
                 //reemplazo el formato de comas que viene de sql para que el mail distinga varios destinatarios
-                EmailAdress = "paula.gonzalez@moellerip.com";
+                EmailAdress = "julian.perez@moellerip.com";
+                //EmailAdress = "paula.gonzalez@moellerip.com";
                 //EmailAdress = "gabriel.biasella@moellerip.com; mariana.volpi@moellerip.com";
                 EmailAdress = EmailAdress.Replace(',', ';');
                 MailMessage message = new MailMessage();
