@@ -63,7 +63,7 @@ namespace EmailSender
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
-                using (SqlCommand command = new SqlCommand("sp_moe_GetMails_Overdue_Days", connection))
+                using (SqlCommand command = new SqlCommand("sp_moe_0013_GetMails_Overdue_Days", connection))
                 {
                     try
                     {
@@ -108,7 +108,7 @@ namespace EmailSender
             using(SqlConnection connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
-                using (SqlCommand command = new SqlCommand("RegisterInvoiceOverdueLog", connection))
+                using (SqlCommand command = new SqlCommand("sp_moe_0014_RegisterInvoiceOverdueLog", connection))
                 {
                     try
                     {
