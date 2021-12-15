@@ -1,6 +1,5 @@
 USE MORE
 go
-select * from SyMailTemplate
 --insertar los nuevos template para correr en otros ambientes
 go
 insert into SyMailTemplate (TemplateID,Portal, TemplateName , TemplateText, SubjectText, MailFrom, Voided, Observaciones, Adduser, Adddate) 
