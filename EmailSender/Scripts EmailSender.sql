@@ -375,68 +375,90 @@ go
 
 USE [Patricia_MoellerIp]
 GO
-CREATE TABLE [dbo].[INVOICE_OVERDUE_EMAIL_LOG](
-	[INVOICE_OVERDUE_LOG_ID] [int] IDENTITY(1,1) NOT NULL,
-	[CLIENT_NAME] [nvarchar](150) NOT NULL,
-	[ACTION_DATE] [datetime] NOT NULL,
- CONSTRAINT [PK_INVOICE_OVERDUE_EMAIL_LOG] PRIMARY KEY CLUSTERED 
+CREATE TABLE [dbo].[MOE_INVOICE_OVERDUE_EMAIL_LOG](
+[INVOICE_OVERDUE_LOG_ID] [int] IDENTITY(1,1) NOT NULL,
+[CLIENT_NAME] [nvarchar](150) NOT NULL,
+[ACTION_DATE] [datetime] NOT NULL,
+CONSTRAINT [PK_MOE_INVOICE_OVERDUE_EMAIL_LOG] PRIMARY KEY CLUSTERED
 (
-	[INVOICE_OVERDUE_LOG_ID] ASC
+[INVOICE_OVERDUE_LOG_ID] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
 
-create or alter procedure sp_moe_0011_Reminder_EmailTemplate
+
+
+create procedure sp_moe_0011_Reminder_EmailTemplate
 as begin
+
+
 
 select * from MORE.dbo.SyMailTemplate where TemplateID = 13
 
+
+
 end
+
+
 
 ------------------------------------------------
 GO
-create or alter procedure sp_moe_0012_Overdue_Days_EmailTemplate
+create procedure sp_moe_0012_Overdue_Days_EmailTemplate
 as begin
+
+
 
 select * from MORE.dbo.SyMailTemplate where TemplateID = 12
 end
 
+
+
 go
-CREATE OR ALTER PROCEDURE RegisterInvoiceOverdueLog
+create PROCEDURE sp_moe_0014_RegisterInvoiceOverdueLog
 @Client_Name nvarchar(150)
 as begin
-insert into INVOICE_OVERDUE_EMAIL_LOG values (@Client_Name,GETDATE())
+insert into MOE_INVOICE_OVERDUE_EMAIL_LOG values (@Client_Name,GETDATE())
 end
 --------------------------------------------------
 go
 --nueva funcion para obtener el mail de las personas que tienen dias vencidos
+
+
 
 CREATE FUNCTION [dbo].[gf_moe_GetInvoiceEmailsFromCase] (@CASE_ID int ) RETURNS NVARCHAR(MAX)
 AS
 BEGIN
 
 
+
+
 DECLARE @RESULT AS NVARCHAR(MAX)
 DECLARE @TMP_EMAILS TABLE (EMAIL varchar(MAX))
 DECLARE @ROLE_TYPE INT
 
+
+
 --seteo el rol por si uno no existe
 IF EXISTS(SELECT ACTOR_ID FROM CASTING WHERE CASE_ID = @CASE_ID AND ROLE_TYPE_ID IN (20007))
-	BEGIN
-		SET @ROLE_TYPE = 20007
-	END
+BEGIN
+SET @ROLE_TYPE = 20007
+END
 ELSE
-	BEGIN
-		SET @ROLE_TYPE = 4
-	END
+BEGIN
+SET @ROLE_TYPE = 4
+END
+
+
 
 
 INSERT INTO @TMP_EMAILS (EMAIL)
 SELECT LOWER(LTRIM(RTRIM(E_MAIL_ADRESS)))
 FROM Patricia_Moellerip.dbo.PAT_NAMES_ADDRESS
 WHERE E_MAIL_ADRESS IS NOT NULL AND NAME_ID IN
-(SELECT ACTOR_ID FROM CASTING WHERE CASE_ID = @CASE_ID AND ROLE_TYPE_ID IN (@ROLE_TYPE)) AND CURRENT_ONE = 1 
+(SELECT ACTOR_ID FROM CASTING WHERE CASE_ID = @CASE_ID AND ROLE_TYPE_ID IN (@ROLE_TYPE)) AND CURRENT_ONE = 1
 AND NOT EXISTS (SELECT EMAIL FROM @TMP_EMAILS WHERE EMAIL = LOWER(LTRIM(RTRIM(E_MAIL_ADRESS))))
+
+
 
 
 
@@ -447,14 +469,20 @@ ORDER BY EMAIL
 
 
 
+
+
 RETURN @result
+
+
 
 
 
 END
 go
-create or alter procedure sp_moe_GetMails_Overdue_Days
+create procedure sp_moe_0013_GetMails_Overdue_Days
 as begin
+
+
 
 SELECT CAST (dbo.fn_case_number(O.CASE_ID) AS NVARCHAR(20)) AS 'CASE_NUMBER',
 CAST (dbo.fn_moe_GetAccountName(O.CASE_ID) AS NVARCHAR(80)) AS 'ACCOUNT_NAME',
@@ -471,6 +499,8 @@ FROM MOE_OVERDUE_INVOICES_LOG O INNER JOIN INVOICE_HEADER H ON O.INVOICE_PATRICI
 WHERE O.INVOICE_PAID IS NULL AND IS_BILLTRADER = 0 and (OVERDUE_DAYS =-7 or OVERDUE_DAYS >=0)
 AND dbo.gf_moe_GetServiceLevel(O.CASE_ID) NOT IN (20003, 20004, 20009, 20010, 20011) AND dbo.fn_moe_GetAccountNameID(O.CASE_ID) <> 1751
 ORDER BY ACCOUNT_NAME, INVOICE_DATE
+
+
 
 end
 --------------------------------------------
