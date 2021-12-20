@@ -100,7 +100,7 @@ namespace EmailSender
                     }
                 }
             }
-            if (DateTime.Now.Day == 10 || DateTime.Now.Day == 12)
+            if (DateTime.Now.Day == 1 || DateTime.Now.Day == 15)
             {
                 SendEmailOverdue(emailTemplateOverdue, listSameAccount, EmailAddress, clientName);
                 repository.InvoiceEmailLog(clientName);
