@@ -84,6 +84,7 @@ namespace EmailSender
 
         private static void ValidationSendEmail(List<InvoiceMail> listSameAccount, EmailTemplate emailTemplateReminder, EmailTemplate emailTemplateOverdue, EmailTemplateRepository repository)
         {
+            List<InvoiceMail> listWithOutReminder = new List<InvoiceMail>();
             string EmailAddress = "";
             string clientName = "";
             foreach (var invoiceMail in listSameAccount)
@@ -92,17 +93,18 @@ namespace EmailSender
                 {
                     EmailAddress = invoiceMail.Email;
                     clientName = invoiceMail.AccountName;
+                    listWithOutReminder.Add(invoiceMail);
                     if (invoiceMail.Overdue_Days == -7)
                     {
                        SendEmailReminder(emailTemplateReminder, invoiceMail);
-                       //lo quito de la lista para que en overdue no se mande de nuevo
-                       listSameAccount.Remove(invoiceMail);
+                        //lo quito de la lista para que en overdue no se mande de nuevo
+                        listWithOutReminder.Remove(invoiceMail);
                     }
                 }
             }
             if (DateTime.Now.Day == 1 || DateTime.Now.Day == 15)
             {
-                SendEmailOverdue(emailTemplateOverdue, listSameAccount, EmailAddress, clientName);
+                SendEmailOverdue(emailTemplateOverdue, listWithOutReminder, EmailAddress, clientName);
                 repository.InvoiceEmailLog(clientName);
             }
         }
@@ -121,6 +123,7 @@ namespace EmailSender
                 //reemplazo el formato de comas que viene de sql para que el mail distinga varios destinatarios
                 invoice.Email = invoice.Email.Replace(',', ';');
                 invoice.Email = "paula.gonzalez@moellerip.com";
+                //invoice.Email = "julian.perez@moellerip.com";
                 bodyMessage = bodyMessage.Replace("{xx_CLIENT_NAME}", invoice.AccountName)
                     .Replace("{xx_INVOICE#}", invoice.InvoiceTango.ToString())
                     .Replace("{xx_INVOICE_AMOUNT}", invoice.Currency+" "+invoice.InvoiceAmount);
