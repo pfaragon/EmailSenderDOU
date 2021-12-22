@@ -119,16 +119,17 @@ namespace EmailSender
         {
             try
             {
+                string EmailAddress = "";
                 string bodyMessage = template.TemplateText;
                 //reemplazo el formato de comas que viene de sql para que el mail distinga varios destinatarios
-                invoice.Email = invoice.Email.Replace(',', ';');
+                EmailAddress = invoice.Email.Replace(',', ';');
                 bodyMessage = bodyMessage.Replace("{xx_CLIENT_NAME}", invoice.AccountName)
                     .Replace("{xx_INVOICE#}", invoice.InvoiceTango.ToString())
                     .Replace("{xx_INVOICE_AMOUNT}", invoice.Currency+" "+invoice.InvoiceAmount);
                 MailMessage message = new MailMessage();
                 SmtpClient smtp = new SmtpClient();
                 message.From = new MailAddress(template.MailFrom);
-                foreach (var address in invoice.Email.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries))
+                foreach (var address in EmailAddress.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries))
                 {
                     message.To.Add(address);
                 }
