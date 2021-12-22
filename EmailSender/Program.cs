@@ -122,8 +122,6 @@ namespace EmailSender
                 string bodyMessage = template.TemplateText;
                 //reemplazo el formato de comas que viene de sql para que el mail distinga varios destinatarios
                 invoice.Email = invoice.Email.Replace(',', ';');
-                invoice.Email = "paula.gonzalez@moellerip.com";
-                //invoice.Email = "julian.perez@moellerip.com";
                 bodyMessage = bodyMessage.Replace("{xx_CLIENT_NAME}", invoice.AccountName)
                     .Replace("{xx_INVOICE#}", invoice.InvoiceTango.ToString())
                     .Replace("{xx_INVOICE_AMOUNT}", invoice.Currency+" "+invoice.InvoiceAmount);
@@ -171,9 +169,6 @@ namespace EmailSender
                 
                 bodyMessage = template.TemplateText.Replace("{xx_CLIENT_NAME}", ClientName).Replace("{xx_Inovoices_rows}",InvoicesRows).Replace("{xx_TOTAL}",Currency + " " +total.ToString());
                 //reemplazo el formato de comas que viene de sql para que el mail distinga varios destinatarios
-                //EmailAdress = "julian.perez@moellerip.com";
-                EmailAdress = "paula.gonzalez@moellerip.com";
-                //EmailAdress = "gabriel.biasella@moellerip.com; mariana.volpi@moellerip.com";
                 EmailAdress = EmailAdress.Replace(',', ';');
                 MailMessage message = new MailMessage();
                 SmtpClient smtp = new SmtpClient();
