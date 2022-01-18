@@ -503,4 +503,27 @@ ORDER BY ACCOUNT_NAME, INVOICE_DATE
 
 
 end
---------------------------------------------
+
+go
+
+USE Patricia_MoellerIp
+go
+alter table MOE_INVOICE_OVERDUE_EMAIL_LOG
+add FINAL_STATE NVARCHAR(100) NULL
+
+GO
+alter table MOE_INVOICE_OVERDUE_EMAIL_LOG
+ADD INVOICE_TANGO INT NULL
+
+go
+alter table MOE_INVOICE_OVERDUE_EMAIL_LOG
+ADD CASE_NUMBER NVARCHAR(50)
+
+
+go
+
+ALTER PROCEDURE sp_moe_0014_RegisterInvoiceOverdueLog
+@Client_Name nvarchar(150), @State nvarchar(100), @Invoice_Tango int, @case_numnber nvarchar(50)
+as begin
+insert into MOE_INVOICE_OVERDUE_EMAIL_LOG values (@Client_Name,GETDATE(), @State, @Invoice_Tango, @case_numnber)
+end

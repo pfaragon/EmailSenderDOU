@@ -96,7 +96,8 @@ namespace EmailSender
                     listWithOutReminder.Add(invoiceMail);
                     if (invoiceMail.Overdue_Days == -7)
                     {
-                       SendEmailReminder(emailTemplateReminder, invoiceMail);
+                        SendEmailReminder(emailTemplateReminder, invoiceMail);
+                        repository.LogReminder(invoiceMail, "Success Reminder Email");
                         //lo quito de la lista para que en overdue no se mande de nuevo
                         listWithOutReminder.Remove(invoiceMail);
                     }
@@ -105,7 +106,7 @@ namespace EmailSender
             if (DateTime.Now.Day == 1 || DateTime.Now.Day == 15)
             {
                 SendEmailOverdue(emailTemplateOverdue, listWithOutReminder, EmailAddress, clientName);
-                repository.InvoiceEmailLog(clientName);
+                repository.LogOverdue(listWithOutReminder);
             }
         }
 
@@ -115,40 +116,51 @@ namespace EmailSender
             return Encoding.Default.GetString(Convert.FromBase64String(Encoding.Default.GetString(Convert.FromBase64String(connectionCoded))));
         }
 
+        //reminder al service level no se le manda nada
+        //si service level es != 2 no se manda
+        //quizas 20005
         private static void SendEmailReminder(EmailTemplate template, InvoiceMail invoice)
         {
             try
             {
-                string EmailAddress = "";
-                string bodyMessage = template.TemplateText;
-                //reemplazo el formato de comas que viene de sql para que el mail distinga varios destinatarios
-                EmailAddress = invoice.Email.Replace(',', ';');
-                bodyMessage = bodyMessage.Replace("{xx_CLIENT_NAME}", invoice.AccountName)
-                    .Replace("{xx_INVOICE#}", invoice.InvoiceTango.ToString())
-                    .Replace("{xx_INVOICE_AMOUNT}", invoice.Currency+" "+invoice.InvoiceAmount);
-                MailMessage message = new MailMessage();
-                SmtpClient smtp = new SmtpClient();
-                message.From = new MailAddress(template.MailFrom);
-                foreach (var address in EmailAddress.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries))
+                if (invoice.ServiceLevel == 2)
                 {
-                    message.To.Add(address);
+                    string EmailAddress = "";
+                    string bodyMessage = template.TemplateText;
+                    //reemplazo el formato de comas que viene de sql para que el mail distinga varios destinatarios
+                    EmailAddress = invoice.Email.Replace(',', ';');
+                    bodyMessage = bodyMessage.Replace("{xx_CLIENT_NAME}", invoice.AccountName)
+                        .Replace("{xx_INVOICE#}", invoice.InvoiceTango.ToString())
+                        .Replace("{xx_INVOICE_AMOUNT}", invoice.Currency + " " + invoice.InvoiceAmount);
+                    MailMessage message = new MailMessage();
+                    SmtpClient smtp = new SmtpClient();
+                    message.From = new MailAddress(template.MailFrom);
+                    foreach (var address in EmailAddress.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        message.To.Add(address);
+                    }
+                    message.Subject = template.SubjectText;
+                    message.IsBodyHtml = true;
+                    message.Body = bodyMessage;
+                    smtp.Port = 587;
+                    smtp.Host = "smtp.office365.com";
+                    smtp.EnableSsl = true;
+                    smtp.UseDefaultCredentials = false;
+                    smtp.Credentials = new NetworkCredential("invoices@moellerip.com", "B$tam$x#36");
+                    smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
+                    smtp.Send(message);
                 }
-                message.Subject = template.SubjectText;
-                message.IsBodyHtml = true; //to make message body as html  
-                message.Body = bodyMessage;
-                smtp.Port = 587;
-                smtp.Host = "smtp.office365.com";
-                smtp.EnableSsl = true;
-                smtp.UseDefaultCredentials = false;
-                smtp.Credentials = new NetworkCredential("invoices@moellerip.com", "B$tam$x#36");
-                smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
-                smtp.Send(message);
             }
             catch (Exception ex) 
             {
-                throw ex;
+                string connection = getConnection();
+                EmailTemplateRepository templateRepository = new EmailTemplateRepository(connection);
+                templateRepository.LogReminder(invoice, ex.Message);
             }
         }
+
+        //aca si es service level solo le mando a paula
+        //los que tengan otra cosa que lvl 2 son la excepcion que va a paula.
         private static void SendEmailOverdue(EmailTemplate template, List<InvoiceMail> invoiceList, string EmailAdress, string ClientName)
         {
             try
@@ -157,6 +169,7 @@ namespace EmailSender
                 string InvoicesRows = "";
                 string bodyMessage = "";
                 string Currency = "";
+                int ServiceLevel = 0;
                 foreach (var invoice in invoiceList)
                 {
                     InvoicesRows += $"<tr><td class='invoice'>{invoice.InvoiceTango}</td>" +
@@ -166,6 +179,7 @@ namespace EmailSender
                         $"<td class='invoice'>{invoice.Currency} {invoice.InvoiceAmount}</td></tr>";
                     total  += invoice.InvoiceAmount;
                     Currency = invoice.Currency;
+                    ServiceLevel = invoice.ServiceLevel;
                 }
                 
                 bodyMessage = template.TemplateText.Replace("{xx_CLIENT_NAME}", ClientName).Replace("{xx_Inovoices_rows}",InvoicesRows).Replace("{xx_TOTAL}",Currency + " " +total.ToString());
@@ -177,6 +191,11 @@ namespace EmailSender
                 foreach (var address in EmailAdress.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries))
                 {
                     message.To.Add(address);
+                }
+                if (ServiceLevel != 2)
+                {
+                    message.To.Clear();
+                    message.To.Add("paula.gonzalez@moellerip.com");
                 }
                 message.Subject = template.SubjectText;
                 message.IsBodyHtml = true; //to make message body as html  
@@ -191,7 +210,7 @@ namespace EmailSender
             }
             catch (Exception ex)
             {
-                throw ex;
+                Console.WriteLine(ex.Message);
             }
         }
     }

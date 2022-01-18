@@ -13,6 +13,7 @@ namespace EmailSender
         public string AccountName { get; set; }
         public int Overdue_Days { get; set; }
         public int InvoiceTango { get; set; }
+        public int ServiceLevel { get; set; }
         public DateTime InvoiceDate { get; set; }
         public string OurReference { get; set; }
         public decimal InvoiceAmount { get; set; }

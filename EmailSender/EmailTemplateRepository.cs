@@ -82,6 +82,7 @@ namespace EmailSender
                                 invoice.InvoiceAmount = (decimal)sdr["INVOICE_AMOUNT"];
                                 invoice.InvoiceDate = (DateTime)sdr["INVOICE_DATE"];
                                 invoice.Currency = sdr["CURRENCY"].ToString();
+                                invoice.ServiceLevel = (int)sdr["SERVICE_LEVEL"];
                                 invoice.OurReference = sdr["CASE_NUMBER"].ToString();
                                 invoiceList.Add(invoice);
                             }
@@ -90,7 +91,6 @@ namespace EmailSender
                     catch (Exception ex)
                     {
                         Console.WriteLine(ex.Message);
-                        throw ex;
                     }
                     finally
                     {
@@ -103,7 +103,19 @@ namespace EmailSender
             return invoiceList;
         }
         
-        public void InvoiceEmailLog(string ClientName)
+        public void LogReminder(InvoiceMail invoiceMail, string state)
+        {
+            this.InvoiceEmailLog(invoiceMail, state);
+        }
+
+        public void LogOverdue(List<InvoiceMail> listOverdue)
+        {
+            foreach (var item in listOverdue)
+            {
+                InvoiceEmailLog(item, "Success Overdue Email");
+            }
+        }
+        private void InvoiceEmailLog(InvoiceMail invoiceMail, string stateText)
         {
             using(SqlConnection connection = new SqlConnection(_connectionString))
             {
@@ -113,7 +125,10 @@ namespace EmailSender
                     try
                     {
                         command.CommandType = CommandType.StoredProcedure;
-                        command.Parameters.AddWithValue("@Client_Name", ClientName);
+                        command.Parameters.AddWithValue("@Client_Name", invoiceMail.AccountName);
+                        command.Parameters.AddWithValue("@State", stateText);
+                        command.Parameters.AddWithValue("@Invoice_Tango", invoiceMail.InvoiceTango);
+                        command.Parameters.AddWithValue("@case_numnber", invoiceMail.OurReference);
                         command.ExecuteNonQuery();
                     }
                     catch (Exception ex)
