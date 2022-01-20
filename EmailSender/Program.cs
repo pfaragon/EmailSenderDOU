@@ -123,7 +123,7 @@ namespace EmailSender
         {
             try
             {
-                if (invoice.ServiceLevel == 2)
+                if (invoice.ServiceLevel == 2 || invoice.ServiceLevel == 20005)
                 {
                     string EmailAddress = "";
                     string bodyMessage = template.TemplateText;
@@ -192,7 +192,7 @@ namespace EmailSender
                 {
                     message.To.Add(address);
                 }
-                if (ServiceLevel != 2)
+                if (ServiceLevel != 2 || ServiceLevel != 20005)
                 {
                     message.To.Clear();
                     message.To.Add("paula.gonzalez@moellerip.com");
