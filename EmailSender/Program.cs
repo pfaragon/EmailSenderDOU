@@ -8,7 +8,7 @@ using System.Net.Mail;
 using System.Net.Mime;
 using System.Text;
 using System.Threading.Tasks;
-
+using SelectPdf;
 
 namespace EmailSender
 {
@@ -16,65 +16,71 @@ namespace EmailSender
     {
         static void Main(string[] args)
         {
-            string connection = getConnection();
-            EmailTemplateRepository templateRepository = new EmailTemplateRepository(connection);
-            Console.WriteLine("Conexion creada");
-            EmailTemplate emailTemplateReminder = templateRepository.GetTemplate("sp_moe_0011_Reminder_EmailTemplate");
-            EmailTemplate emailTemplateOverdue = templateRepository.GetTemplate("sp_moe_0012_Overdue_Days_EmailTemplate");
-            Console.WriteLine("template obtenidos");
+            int monthsBefore = Int32.Parse(args[0]);
+            //Creo la conexión a la base de datos.
+            EmailTemplateRepository templateRepository = new EmailTemplateRepository(GetConnection());
+            Console.WriteLine("La conexión ha sido exitosa.");
 
-            //para usar el template que corresponda en base a si es reminder o si ya se vencio.
-            List<InvoiceMail> emailList = templateRepository.GetInvoices();
+            //Obtengo el lisato de renovaciones según el parametro indicado
+            List<RenewalDetail> renewalsList = templateRepository.GetRenewals(monthsBefore);
 
-            List<InvoiceMail> listSameAccount = new List<InvoiceMail>();
-            InvoiceMail lastReviewed = null;
-
+            //Lista para agrupar las renovaciones que van en el mismo email
+            List<RenewalDetail> sameEmailRenewalsList = new List<RenewalDetail>();
+            RenewalDetail lastReviewed = null;
             int count = 1;
-            //en el invoice tengo que ver si es una misma cuenta para mandar un solo email con los datos de esa cuenta.
-            foreach (var invoice in emailList)
+
+            //Agrupo las renovaciones que van en el mismo email de acuerdo a el CaseCountry, AgentNameId y ApplicantNameId
+            foreach (var renewal in renewalsList)
             {
                 //si es la primer vuelta seteo al actual.
                 if (lastReviewed == null)
                 {
-                    lastReviewed = invoice;
-                    listSameAccount.Add(invoice);
+                    lastReviewed = renewal;
+                    sameEmailRenewalsList.Add(renewal);
                 }
-                //si no es la primer vuelta me fijo si es la misma cuenta que la anterior.
+                //si no es la primer vuelta me fijo si corresponde al mismo mail.
                 else
                 {
-                    //si no es el ultimo de la lista realizo esta accion
-                    if (count != emailList.Count)
+                    //si no es el ultimo de la lista
+                    if (count != renewalsList.Count)
                     {
-                        //si es la misma cuenta que la anterior la meto en la lista para mandar toda la info junta en un mail.
-                        if (lastReviewed.AccountName == invoice.AccountName)
+                        //si pertenece al mismo mail que la renovacion anterior la meto en la lista.
+                        if ((lastReviewed.AgentNameId == renewal.AgentNameId) &&
+                                (lastReviewed.ApplicantNameId == renewal.ApplicantNameId) &&
+                                    (lastReviewed.CountryName == renewal.CountryName))
                         {
-                            listSameAccount.Add(invoice);
+                            sameEmailRenewalsList.Add(renewal);
                         }
-                        //si no es la misma cuenta, mando el mail para la cuenta anterior que hasta ahora nunca se mando, limpio la lista para agrupar por esta nueva cuenta
+                        //si no va en el mismo email, mando el mail para la agrupacion anterior que hasta ahora nunca se mando, limpio la lista para agrupar por la nueva
                         else
                         {
-                            ValidationSendEmail(listSameAccount, emailTemplateReminder, emailTemplateOverdue, templateRepository);
-                            listSameAccount.Clear();
-                            listSameAccount.Add(invoice);
-                            lastReviewed = invoice;
+                            ValidationSendEmail(sameEmailRenewalsList, monthsBefore, templateRepository);
+                            sameEmailRenewalsList.Clear();
+                            sameEmailRenewalsList.Add(renewal);
+                            lastReviewed = renewal;
                         }
                     }
                     //si es el ultimo de la lista
                     else
                     {
-                        //si es la misma cuenta que la anterior la meto en la lista para mandar toda la info junta en un mail, pero desde aca porque termina la lista.
-                        if (lastReviewed.AccountName == invoice.AccountName)
+                        //Si pertenece al mismo mail que la renovación anterior, la agrego a la lista y envio el mail ya que es la ultima renovacion.
+                        if ((lastReviewed.AgentNameId == renewal.AgentNameId) &&
+                            (lastReviewed.ApplicantNameId == renewal.ApplicantNameId) &&
+                            (lastReviewed.CountryName == renewal.CountryName))
                         {
-                            listSameAccount.Add(invoice);
-                            ValidationSendEmail(listSameAccount,emailTemplateReminder, emailTemplateOverdue, templateRepository);
+                            sameEmailRenewalsList.Add(renewal);
+                            ValidationSendEmail(sameEmailRenewalsList, monthsBefore, templateRepository);
                         }
-                        //si no es la misma cuenta que el anteultimo tengo que realizar la accion desde aca con un elemento pero tambien enviar el anterior porque estaba en espera
+                        //Si no pertenece al mail anterior, envio el mail anterior y esta renovacion en un nuevo email, ya que es la ultima renovacion.
                         else
                         {
-                            ValidationSendEmail(listSameAccount, emailTemplateReminder, emailTemplateOverdue, templateRepository);
-                            List<InvoiceMail> listLastInvoice = new List<InvoiceMail>();
-                            listLastInvoice.Add(invoice);
-                            ValidationSendEmail(listLastInvoice, emailTemplateReminder, emailTemplateOverdue, templateRepository);
+                            //Mail anterior
+                            ValidationSendEmail(sameEmailRenewalsList, monthsBefore, templateRepository);
+
+                            //Nuevo mail con ultima renovacion
+                            List<RenewalDetail> listLastRenewal = new List<RenewalDetail>();
+                            listLastRenewal.Add(renewal);
+                            ValidationSendEmail(listLastRenewal, monthsBefore, templateRepository);
                         }
                     }
                 }
@@ -82,136 +88,230 @@ namespace EmailSender
             }
         }
 
-        private static void ValidationSendEmail(List<InvoiceMail> listSameAccount, EmailTemplate emailTemplateReminder, EmailTemplate emailTemplateOverdue, EmailTemplateRepository repository)
-        {
-            List<InvoiceMail> listWithOutReminder = new List<InvoiceMail>();
-            string EmailAddress = "";
-            string clientName = "";
-            foreach (var invoiceMail in listSameAccount)
-            {
-                if (invoiceMail.Email != "")
-                {
-                    EmailAddress = invoiceMail.Email;
-                    clientName = invoiceMail.AccountName;
-                    listWithOutReminder.Add(invoiceMail);
-                    if (invoiceMail.Overdue_Days == -7)
-                    {
-                        SendEmailReminder(emailTemplateReminder, invoiceMail);
-                        repository.LogReminder(invoiceMail, "Success Reminder Email");
-                        //lo quito de la lista para que en overdue no se mande de nuevo
-                        listWithOutReminder.Remove(invoiceMail);
-                    }
-                }
-            }
-            if (DateTime.Now.Day == 1 || DateTime.Now.Day == 15)
-            {
-                SendEmailOverdue(emailTemplateOverdue, listWithOutReminder, EmailAddress, clientName);
-                repository.LogOverdue(listWithOutReminder);
-            }
-        }
-
-        private static string getConnection()
+        private static string GetConnection()
         {
             string connectionCoded = ConfigurationManager.ConnectionStrings["ConexionMoreProd"].ConnectionString;
             return Encoding.Default.GetString(Convert.FromBase64String(Encoding.Default.GetString(Convert.FromBase64String(connectionCoded))));
         }
 
-        //reminder al service level no se le manda nada
-        //si service level es != 2 no se manda
-        //quizas 20005
-        private static void SendEmailReminder(EmailTemplate template, InvoiceMail invoice)
+        private static void ValidationSendEmail(List<RenewalDetail> renewalList, int monthsBefore, EmailTemplateRepository repository)
         {
-            try
+
+            //List<RenewalDetail> listWithOutReminder = new List<RenewalDetail>();
+            string correspondenceAddressEmails = "";
+            string agentName = "";
+            string applicantName = "";
+            string correspondenceAddressName = "";
+            string countryId = "";
+            string countryName = "";
+            int languageId = 0;
+
+            correspondenceAddressEmails = renewalList[0].CorrespondenceAddressEmails;
+            agentName = renewalList[0].AgentName;
+            applicantName = renewalList[0].ApplicantName;
+            correspondenceAddressName = renewalList[0].CorrespondenceAddressName;
+            countryId = renewalList[0].CountryId;
+            countryName = renewalList[0].CountryName;
+
+            switch (renewalList[0].CorrespondenceAddressLanguageId)
             {
-                if (invoice.ServiceLevel == 2 || invoice.ServiceLevel == 20005)
+                case 4:
+                        languageId = 4;
+                        break;
+                case 6:
+                        languageId = 6;
+                        break;
+                default:
+                        languageId = 3;
+                        break;
+            }
+
+            //if (countryId == "AR") {
+            //    return;
+            //}
+
+            EmailTemplate emailTemplate = repository.GetTemplate("EMAIL", languageId, countryId, monthsBefore);
+            EmailTemplate attachTemplate = repository.GetTemplate("ATTACH", languageId);
+
+            Console.WriteLine("Templates obtenidos");
+
+            //foreach (RenewalDetail renewal in listSameAccount)
+            //{
+
+            //    listWithOutReminder.Add(renewal);
+
+            //}
+
+            //if (DateTime.Now.Day == 4)
+            //{
+                if (correspondenceAddressEmails != "")
                 {
-                    string EmailAddress = "";
-                    string bodyMessage = template.TemplateText;
-                    //reemplazo el formato de comas que viene de sql para que el mail distinga varios destinatarios
-                    EmailAddress = invoice.Email.Replace(',', ';');
-                    bodyMessage = bodyMessage.Replace("{xx_CLIENT_NAME}", invoice.AccountName)
-                        .Replace("{xx_INVOICE#}", invoice.InvoiceTango.ToString())
-                        .Replace("{xx_INVOICE_AMOUNT}", invoice.Currency + " " + invoice.InvoiceAmount);
-                    MailMessage message = new MailMessage();
-                    SmtpClient smtp = new SmtpClient();
-                    message.From = new MailAddress(template.MailFrom);
-                    foreach (var address in EmailAddress.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries))
-                    {
-                        message.To.Add(address);
-                    }
-                    message.Subject = template.SubjectText;
-                    message.IsBodyHtml = true;
-                    message.Body = bodyMessage;
-                    smtp.Port = 587;
-                    smtp.Host = "smtp.office365.com";
-                    smtp.EnableSsl = true;
-                    smtp.UseDefaultCredentials = false;
-                    smtp.Credentials = new NetworkCredential("invoices@moellerip.com", "B$tam$x#36");
-                    smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
-                    smtp.Send(message);
+                    SendEmail(emailTemplate, attachTemplate, renewalList, correspondenceAddressEmails, agentName, applicantName, correspondenceAddressName, countryName);
+                    repository.LogOverdue(renewalList);
+                    Console.WriteLine("Email enviado correctamente");
                 }
-            }
-            catch (Exception ex) 
-            {
-                string connection = getConnection();
-                EmailTemplateRepository templateRepository = new EmailTemplateRepository(connection);
-                templateRepository.LogReminder(invoice, ex.Message);
-            }
+                else
+                {
+                    Console.WriteLine("El email no puedo ser enviado. No hay dirección de email.");
+                }
+            //}
         }
 
-        //aca si es service level solo le mando a paula
-        //los que tengan otra cosa que lvl 2 son la excepcion que va a paula.
-        private static void SendEmailOverdue(EmailTemplate template, List<InvoiceMail> invoiceList, string EmailAdress, string ClientName)
+        
+        private static void SendEmail(
+            EmailTemplate emailTemplate,
+            EmailTemplate attachTemplate,
+            List<RenewalDetail> renewalList,
+            string correspondenceAddressEmails,
+            string agentName,
+            string applicantName,
+            string correspondenceAddressName,
+            string countryName)
         {
             try
             {
-                decimal total = 0;
-                string InvoicesRows = "";
-                string bodyMessage = "";
-                string Currency = "";
-                int ServiceLevel = 0;
-                foreach (var invoice in invoiceList)
+                string emailBody = String.Empty;
+                string emailBodylRows = String.Empty;
+
+                string attachBody = String.Empty;
+                string attachBodyRows = String.Empty;
+
+                foreach (var renewal in renewalList)
                 {
-                    InvoicesRows += $"<tr><td class='invoice'>{invoice.InvoiceTango}</td>" +
-                        $"<td class='invoice'>{invoice.OurReference}</td>" +
-                        $"<td class='invoice'>{invoice.InvoiceDate.ToString("MM/dd/yyyy")}</td>" +
-                        $"<td class='invoice'>{invoice.Overdue_Days}</td>" +
-                        $"<td class='invoice'>{invoice.Currency} {invoice.InvoiceAmount}</td></tr>";
-                    total  += invoice.InvoiceAmount;
-                    Currency = invoice.Currency;
-                    ServiceLevel = invoice.ServiceLevel;
+                    emailBodylRows +=
+                        $"<tr>" +
+                            $"<td class='invoice'>{renewal.Catchword}</td>" +
+                            $"<td>{renewal.ApplicationNumber}</td>" +
+                            $"<td>{renewal.RegistrationNumber}</td>" +
+                            $"<td>{renewal.NextRenewal.ToString("MM/dd/yyyy")}</td>" +
+                            $"<td>{renewal.Classes}</td>" +
+                            $"<td>{renewal.YourReference}</td>" +
+                            $"<td>{renewal.CaseNumber}</td>" +
+                        $"</tr>";
+
+
+                    attachBodyRows +=
+                        $"<tr>" +
+                            $"<td class='invoice'>{renewal.Catchword}</td>" +
+                            $"<td style='text-align: center;'>{GetDataURL(renewal.DeviceFileName)}</td>" +
+                            $"<td>{renewal.ApplicationNumber}</td>" +
+                            $"<td>{renewal.RegistrationNumber}</td>" +
+                            $"<td>{renewal.NextRenewal.ToString("MM/dd/yyyy")}</td>" +
+                            $"<td>{renewal.Classes}</td>" +
+                            $"<td>{renewal.YourReference}</td>" +
+                            $"<td>{renewal.CaseNumber}</td>" +
+                        $"</tr>" +
+                        $"<tr><td colspan='8'>{renewal.ClassesDescription}</td></tr>";
                 }
-                
-                bodyMessage = template.TemplateText.Replace("{xx_CLIENT_NAME}", ClientName).Replace("{xx_Inovoices_rows}",InvoicesRows).Replace("{xx_TOTAL}",Currency + " " +total.ToString());
+
+                emailBody = emailTemplate.TemplateText
+                     .Replace("{xx_Emails}", correspondenceAddressEmails.Replace(',', ';'))
+                     .Replace("{xx_Cases}", emailBodylRows)
+                     .Replace("{xx_Agent}", agentName)
+                     .Replace("{xx_Applicant}", applicantName)
+                     .Replace("{xx_CorrespondenceAddress}", correspondenceAddressName);
+
+                attachBody = attachTemplate.TemplateText
+                     .Replace("{xx_Cases}", attachBodyRows);
+
                 //reemplazo el formato de comas que viene de sql para que el mail distinga varios destinatarios
-                EmailAdress = EmailAdress.Replace(',', ';');
                 MailMessage message = new MailMessage();
                 SmtpClient smtp = new SmtpClient();
-                message.From = new MailAddress(template.MailFrom);
-                foreach (var address in EmailAdress.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries))
-                {
-                    message.To.Add(address);
-                }
-                if (ServiceLevel != 2 || ServiceLevel != 20005)
-                {
-                    message.To.Clear();
-                    message.To.Add("paula.gonzalez@moellerip.com");
-                }
-                message.Subject = template.SubjectText;
+
+                message.From = new MailAddress(emailTemplate.MailFrom);
+
+                message.To.Clear();
+
+                //foreach (var address in EmailAdress.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries))
+                //{
+                //    message.To.Add(address);
+                //}
+
+                //message.To.Add("gabriela.aparicio@moellerip.com");
+                message.To.Add("pablo.aragon@moellerip.com");
+
+                message.Subject = emailTemplate.SubjectText.Replace("{xx_Country}", countryName.ToUpper());
                 message.IsBodyHtml = true; //to make message body as html  
-                message.Body = bodyMessage;
+                message.Body = emailBody;
+
+                //Creo el documento y lo adjunto al email
+                MemoryStream attachFile = HtmlToPdf(attachBody);
+                message.Attachments.Add(new Attachment(attachFile, attachTemplate.SubjectText + ".pdf"));
+
                 smtp.Port = 587;
                 smtp.Host = "smtp.office365.com";
                 smtp.EnableSsl = true;
                 smtp.UseDefaultCredentials = false;
-                smtp.Credentials = new NetworkCredential("invoices@moellerip.com", "B$tam$x#36");
+                smtp.Credentials = new NetworkCredential("no-reply@moellerip.com", "Pent$xeR44");
                 smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
+
                 smtp.Send(message);
+
+                //Creo el email con el adjunto en un archivo
+
+                string emailFileName = attachTemplate.SubjectText + DateTime.Now.ToString(String.Format("_yyyyMMdd_HHmmss_ffff")) + ".eml";
+
+                foreach (var renewal in renewalList)
+                {
+                    string filePath = Path.Combine(renewal.DocumentsPath, emailFileName);
+
+                    string emailFile = message.ToEml();
+                    byte[] emailFileBytes = System.Text.Encoding.UTF8.GetBytes(emailFile);
+
+                    WriteFile(filePath, emailFileBytes);
+                }
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }
         }
+
+        private static MemoryStream HtmlToPdf(string html)
+        {
+
+            HtmlToPdf converter = new HtmlToPdf();
+            PdfDocument doc = converter.ConvertHtmlString(html);
+            MemoryStream pdfStream = new MemoryStream();
+
+            doc.Save(pdfStream);
+            pdfStream.Position = 0;
+            doc.Close();
+            return pdfStream;
+        }
+
+        private static void WriteFile(string filePath, byte[] fileBytes)
+        {
+            try
+            {
+                FileInfo file = new FileInfo(filePath);
+                file.Directory.Create(); // If the directory already exists, this method does nothing.
+                File.WriteAllBytes(file.FullName, fileBytes);
+            }
+            catch (Exception ex)
+            {
+
+                Console.Write(ex.Message);
+                Console.ReadLine();
+            }
+        }
+
+        public static string GetDataURL(string deviceFileName)
+        {
+            string devicePath = @"C:\Patricia\Device\";
+
+            if (deviceFileName == string.Empty)
+            {
+                return " - ";
+            }
+            else
+            {
+                return "<img style='display: block; max-width: 100px; max-height: 100px; width: auto; height: auto; ' src=\"data:image/"
+                            + Path.GetExtension(devicePath + deviceFileName).Replace(".", "")
+                            + ";base64,"
+                            + Convert.ToBase64String(File.ReadAllBytes(devicePath + deviceFileName)) + "\" />";
+            }
+        }
     }
 }
+
