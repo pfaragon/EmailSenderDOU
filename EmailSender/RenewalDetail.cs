@@ -17,6 +17,7 @@ namespace EmailSender
         public string ApplicantName { get; set; }
         public string CountryId { get; set; }
         public string CountryName { get; set; }
+        public string CorrespondenceAddressId { get; set; }
         public string CorrespondenceAddressName { get; set; }
         public string CorrespondenceAddressEmails { get; set; }
         public int CorrespondenceAddressLanguageId { get; set; }
@@ -28,7 +29,7 @@ namespace EmailSender
         public string Classes { get; set; }
         public string ClassesDescription { get; set; }
         public string TrademarkCategory { get; set; }
-        public string DeviceFileName { get; set; }
+        public string DeviceFilePath { get; set; }
         public string DocumentsPath { get; set; }
 
     }

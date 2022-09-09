@@ -32,7 +32,7 @@ namespace EmailSender
                 // Call close method
                 closeMethod.Invoke(mailWriter, BindingFlags.Instance | BindingFlags.NonPublic, null, new object[] { }, null);
 
-                return Encoding.ASCII.GetString(memoryStream.ToArray());
+                return Encoding.UTF8.GetString(memoryStream.ToArray());
             }
         }
     }

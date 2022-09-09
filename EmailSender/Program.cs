@@ -96,8 +96,6 @@ namespace EmailSender
 
         private static void ValidationSendEmail(List<RenewalDetail> renewalList, int monthsBefore, EmailTemplateRepository repository)
         {
-
-            //List<RenewalDetail> listWithOutReminder = new List<RenewalDetail>();
             string correspondenceAddressEmails = "";
             string agentName = "";
             string applicantName = "";
@@ -116,49 +114,35 @@ namespace EmailSender
             switch (renewalList[0].CorrespondenceAddressLanguageId)
             {
                 case 4:
-                        languageId = 4;
-                        break;
+                    languageId = 4;
+                    break;
                 case 6:
-                        languageId = 6;
-                        break;
+                    languageId = 6;
+                    break;
                 default:
-                        languageId = 3;
-                        break;
+                    languageId = 3;
+                    break;
             }
-
-            //if (countryId == "AR") {
-            //    return;
-            //}
 
             EmailTemplate emailTemplate = repository.GetTemplate("EMAIL", languageId, countryId, monthsBefore);
             EmailTemplate attachTemplate = repository.GetTemplate("ATTACH", languageId);
 
             Console.WriteLine("Templates obtenidos");
 
-            //foreach (RenewalDetail renewal in listSameAccount)
-            //{
-
-            //    listWithOutReminder.Add(renewal);
-
-            //}
-
-            //if (DateTime.Now.Day == 4)
-            //{
-                if (correspondenceAddressEmails != "")
-                {
-                    SendEmail(emailTemplate, attachTemplate, renewalList, correspondenceAddressEmails, agentName, applicantName, correspondenceAddressName, countryName);
-                    repository.LogOverdue(renewalList);
-                    Console.WriteLine("Email enviado correctamente");
-                }
-                else
-                {
-                    Console.WriteLine("El email no puedo ser enviado. No hay dirección de email.");
-                }
-            //}
+            if (correspondenceAddressEmails.Trim() != String.Empty)
+            {
+                SendEmail(repository, emailTemplate, attachTemplate, renewalList, correspondenceAddressEmails, agentName, applicantName, correspondenceAddressName, countryName);
+                Console.WriteLine("Email enviado correctamente");
+            }
+            else
+            {
+                repository.LogEmailSent(renewalList, "EMPTY_EMAIL", "El email no puedo ser enviado. No hay dirección de email.", emailTemplate.SubjectText.Replace("{xx_Country}", countryName.ToUpper()).Replace("{xx_Applicant}", applicantName.ToUpper()));
+                Console.WriteLine("El email no puedo ser enviado. No hay dirección de email.");
+            }
         }
 
-        
-        private static void SendEmail(
+
+        private static void SendEmail(EmailTemplateRepository repository,
             EmailTemplate emailTemplate,
             EmailTemplate attachTemplate,
             List<RenewalDetail> renewalList,
@@ -183,20 +167,19 @@ namespace EmailSender
                             $"<td class='invoice'>{renewal.Catchword}</td>" +
                             $"<td>{renewal.ApplicationNumber}</td>" +
                             $"<td>{renewal.RegistrationNumber}</td>" +
-                            $"<td>{renewal.NextRenewal.ToString("MM/dd/yyyy")}</td>" +
+                            $"<td>{renewal.NextRenewal.ToString("dd/MM/yyyy")}</td>" +
                             $"<td>{renewal.Classes}</td>" +
                             $"<td>{renewal.YourReference}</td>" +
                             $"<td>{renewal.CaseNumber}</td>" +
                         $"</tr>";
 
-
                     attachBodyRows +=
                         $"<tr>" +
                             $"<td class='invoice'>{renewal.Catchword}</td>" +
-                            $"<td style='text-align: center;'>{GetDataURL(renewal.DeviceFileName)}</td>" +
+                            $"<td style='text-align: center;'>{GetDataURL(renewal.DeviceFilePath)}</td>" +
                             $"<td>{renewal.ApplicationNumber}</td>" +
                             $"<td>{renewal.RegistrationNumber}</td>" +
-                            $"<td>{renewal.NextRenewal.ToString("MM/dd/yyyy")}</td>" +
+                            $"<td>{renewal.NextRenewal.ToString("dd/MM/yyyy")}</td>" +
                             $"<td>{renewal.Classes}</td>" +
                             $"<td>{renewal.YourReference}</td>" +
                             $"<td>{renewal.CaseNumber}</td>" +
@@ -205,14 +188,15 @@ namespace EmailSender
                 }
 
                 emailBody = emailTemplate.TemplateText
-                     .Replace("{xx_Emails}", correspondenceAddressEmails.Replace(',', ';'))
-                     .Replace("{xx_Cases}", emailBodylRows)
-                     .Replace("{xx_Agent}", agentName)
-                     .Replace("{xx_Applicant}", applicantName)
-                     .Replace("{xx_CorrespondenceAddress}", correspondenceAddressName);
+                    .Replace("{xx_Emails}", correspondenceAddressEmails.Replace(',', ';'))
+                    .Replace("{xx_Cases}", emailBodylRows)
+                    .Replace("{xx_Agent}", agentName)
+                    .Replace("{xx_Applicant}", applicantName)
+                    .Replace("{xx_CorrespondenceAddress}", correspondenceAddressName);
 
                 attachBody = attachTemplate.TemplateText
-                     .Replace("{xx_Cases}", attachBodyRows);
+                    .Replace("{xx_Applicant}", applicantName.ToUpper())
+                    .Replace("{xx_Cases}", attachBodyRows);
 
                 //reemplazo el formato de comas que viene de sql para que el mail distinga varios destinatarios
                 MailMessage message = new MailMessage();
@@ -222,21 +206,22 @@ namespace EmailSender
 
                 message.To.Clear();
 
-                //foreach (var address in EmailAdress.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries))
-                //{
-                //    message.To.Add(address);
-                //}
+                foreach (var address in correspondenceAddressEmails.Split(new[] { ";" }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    message.To.Add(address);
+                }
 
                 //message.To.Add("gabriela.aparicio@moellerip.com");
-                message.To.Add("pablo.aragon@moellerip.com");
+                message.Bcc.Add("pablo.aragon@moellerip.com");
+                //message.To.Add("liliana.bajos@moellerip.com");
 
-                message.Subject = emailTemplate.SubjectText.Replace("{xx_Country}", countryName.ToUpper());
+                message.Subject = emailTemplate.SubjectText.Replace("{xx_Country}", countryName.ToUpper()).Replace("{xx_Applicant}", applicantName.ToUpper());
                 message.IsBodyHtml = true; //to make message body as html  
                 message.Body = emailBody;
 
                 //Creo el documento y lo adjunto al email
                 MemoryStream attachFile = HtmlToPdf(attachBody);
-                message.Attachments.Add(new Attachment(attachFile, attachTemplate.SubjectText + ".pdf"));
+                message.Attachments.Add(new Attachment(attachFile, attachTemplate.SubjectText.Replace("{xx_Applicant}", applicantName.ToUpper()) + ".pdf"));
 
                 smtp.Port = 587;
                 smtp.Host = "smtp.office365.com";
@@ -245,31 +230,36 @@ namespace EmailSender
                 smtp.Credentials = new NetworkCredential("no-reply@moellerip.com", "Pent$xeR44");
                 smtp.DeliveryMethod = SmtpDeliveryMethod.Network;
 
-                smtp.Send(message);
-
                 //Creo el email con el adjunto en un archivo
 
-                string emailFileName = attachTemplate.SubjectText + DateTime.Now.ToString(String.Format("_yyyyMMdd_HHmmss_ffff")) + ".eml";
+                string emailFileName = attachTemplate.SubjectText.Replace("{xx_Applicant}", applicantName.ToUpper()) + DateTime.Now.ToString(String.Format("_yyyyMMdd_HHmmss_ffff")) + ".eml";
 
                 foreach (var renewal in renewalList)
                 {
                     string filePath = Path.Combine(renewal.DocumentsPath, emailFileName);
+                    FileInfo file = new FileInfo(filePath);
 
                     string emailFile = message.ToEml();
                     byte[] emailFileBytes = System.Text.Encoding.UTF8.GetBytes(emailFile);
 
-                    WriteFile(filePath, emailFileBytes);
+                    WriteFile(file, emailFileBytes);
+                    repository.InsertPatriciaDocument(renewal.CaseId, message.Subject, file.Name);
+
                 }
+
+                smtp.Send(message);
+                
+                repository.LogEmailSent(renewalList, "SUCCESS", "El email fue enviado con exito.", emailTemplate.SubjectText.Replace("{xx_Country}", countryName.ToUpper()).Replace("{xx_Applicant}", applicantName.ToUpper()), emailFileName);
             }
             catch (Exception ex)
             {
+                repository.LogEmailSent(renewalList, "ERROR", ex.Message, emailTemplate.SubjectText.Replace("{xx_Country}", countryName.ToUpper()).Replace("{xx_Applicant}", applicantName.ToUpper()));
                 Console.WriteLine(ex.Message);
             }
         }
 
         private static MemoryStream HtmlToPdf(string html)
         {
-
             HtmlToPdf converter = new HtmlToPdf();
             PdfDocument doc = converter.ConvertHtmlString(html);
             MemoryStream pdfStream = new MemoryStream();
@@ -280,36 +270,26 @@ namespace EmailSender
             return pdfStream;
         }
 
-        private static void WriteFile(string filePath, byte[] fileBytes)
+        private static void WriteFile(FileInfo file, byte[] fileBytes)
         {
-            try
-            {
-                FileInfo file = new FileInfo(filePath);
-                file.Directory.Create(); // If the directory already exists, this method does nothing.
-                File.WriteAllBytes(file.FullName, fileBytes);
-            }
-            catch (Exception ex)
-            {
-
-                Console.Write(ex.Message);
-                Console.ReadLine();
-            }
+            file.Directory.Create(); // If the directory already exists, this method does nothing.
+            File.WriteAllBytes(file.FullName, fileBytes);
         }
 
-        public static string GetDataURL(string deviceFileName)
+        public static string GetDataURL(string deviceFilePath)
         {
-            string devicePath = @"C:\Patricia\Device\";
+            FileInfo file = new FileInfo(deviceFilePath);
 
-            if (deviceFileName == string.Empty)
+            if (file.Name == string.Empty)
             {
                 return " - ";
             }
             else
             {
                 return "<img style='display: block; max-width: 100px; max-height: 100px; width: auto; height: auto; ' src=\"data:image/"
-                            + Path.GetExtension(devicePath + deviceFileName).Replace(".", "")
+                            + Path.GetExtension(deviceFilePath).Replace(".", "")
                             + ";base64,"
-                            + Convert.ToBase64String(File.ReadAllBytes(devicePath + deviceFileName)) + "\" />";
+                            + Convert.ToBase64String(File.ReadAllBytes(deviceFilePath)) + "\" />";
             }
         }
     }

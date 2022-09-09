@@ -91,6 +91,7 @@ namespace EmailSender
                                 renewal.ApplicantName = reader["ApplicantName"].ToString();
                                 renewal.CountryId = reader["CountryId"].ToString();
                                 renewal.CountryName = reader["Country"].ToString();
+                                renewal.CorrespondenceAddressId = reader["CorrespondenceAddressId"].ToString();
                                 renewal.CorrespondenceAddressName = reader["CorrespondenceAddressName"].ToString();
                                 renewal.CorrespondenceAddressEmails = reader["CorrespondenceAddressEmails"] == DBNull.Value ? "" : reader["CorrespondenceAddressEmails"].ToString();
                                 renewal.CorrespondenceAddressLanguageId = int.Parse(reader["CorrespondenceAddressLanguageId"].ToString());
@@ -102,7 +103,7 @@ namespace EmailSender
                                 renewal.Classes = reader["Classes"].ToString();
                                 renewal.ClassesDescription = reader["ClassesDescription"].ToString();
                                 renewal.TrademarkCategory = reader["TrademarkCategory"].ToString();
-                                renewal.DeviceFileName = reader["DeviceFileName"].ToString();
+                                renewal.DeviceFilePath = reader["DeviceFilePath"].ToString();
                                 renewal.DocumentsPath = reader["DocumentsPath"].ToString();
                                 renewalList.Add(renewal);
                             }
@@ -122,34 +123,55 @@ namespace EmailSender
             }
             return renewalList;
         }
-        
-        public void LogReminder(RenewalDetail invoiceMail, string state)
-        {
-            this.InvoiceEmailLog(invoiceMail, state);
-        }
 
-        public void LogOverdue(List<RenewalDetail> listOverdue)
+        public void LogEmailSent(List<RenewalDetail> listRenewals, string emailStatus, string emailStatusMessage, string emailSubject, string emailFileName = "")
         {
-            foreach (var item in listOverdue)
+            int emailNumber = SetProxEmailNumber();
+
+            foreach (var renewal in listRenewals)
             {
-                InvoiceEmailLog(item, "Success Overdue Email");
+                RenewalEmailLog(renewal, emailNumber, emailStatus, emailStatusMessage, emailSubject, emailFileName);
             }
         }
-        private void InvoiceEmailLog(RenewalDetail invoiceMail, string stateText)
+        private void RenewalEmailLog(RenewalDetail renewalEmail, int emailNumber, string emailStatus, string emailStatusMessage, string emailSubject, string emailFileName)
         {
             using(SqlConnection connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
-                using (SqlCommand command = new SqlCommand("sp_moe_0014_RegisterInvoiceOverdueLog", connection))
+                using (SqlCommand command = new SqlCommand("sp_moe_0020_InsertRenewalEmailLog", connection))
                 {
                     try
                     {
-                        //command.CommandType = CommandType.StoredProcedure;
-                        //command.Parameters.AddWithValue("@Client_Name", invoiceMail.AccountName);
-                        //command.Parameters.AddWithValue("@State", stateText);
-                        //command.Parameters.AddWithValue("@Invoice_Tango", invoiceMail.InvoiceTango);
-                        //command.Parameters.AddWithValue("@case_numnber", invoiceMail.OurReference);
-                        //command.ExecuteNonQuery();
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.Parameters.AddWithValue("@EmailNumber", emailNumber);
+                        command.Parameters.AddWithValue("@EmailSubject", emailSubject);
+                        command.Parameters.AddWithValue("@EmailStatus", emailStatus);
+                        command.Parameters.AddWithValue("@EmailStatusMessage", emailStatusMessage);
+                        command.Parameters.AddWithValue("EmailFileName", emailFileName);
+                        command.Parameters.AddWithValue("@CaseId", renewalEmail.CaseId);
+                        command.Parameters.AddWithValue("@CaseNumber", renewalEmail.CaseNumber);
+                        command.Parameters.AddWithValue("@AgentNameId", renewalEmail.AgentNameId);
+                        command.Parameters.AddWithValue("@AgentName", renewalEmail.AgentName);
+                        command.Parameters.AddWithValue("@ApplicantNameId", renewalEmail.ApplicantNameId);
+                        command.Parameters.AddWithValue("@ApplicantName", renewalEmail.ApplicantName);
+                        command.Parameters.AddWithValue("@CountryId", renewalEmail.CountryId);
+                        command.Parameters.AddWithValue("@Country", renewalEmail.CountryName);
+                        command.Parameters.AddWithValue("@CorrespondenceAddressId", renewalEmail.CorrespondenceAddressId);
+                        command.Parameters.AddWithValue("@CorrespondenceAddressName", renewalEmail.CorrespondenceAddressName);
+                        command.Parameters.AddWithValue("@CorrespondenceAddressEmails", renewalEmail.CorrespondenceAddressEmails);
+                        command.Parameters.AddWithValue("@CorrespondenceAddressLanguageId", renewalEmail.CorrespondenceAddressLanguageId);
+                        command.Parameters.AddWithValue("@NextRenewal", renewalEmail.NextRenewal);
+                        command.Parameters.AddWithValue("@RegistrationDate", renewalEmail.RegistrationDate);
+                        command.Parameters.AddWithValue("@ApplicationNumber", renewalEmail.ApplicationNumber);
+                        command.Parameters.AddWithValue("@RegistrationNumber", renewalEmail.RegistrationNumber);
+                        command.Parameters.AddWithValue("@Catchword", renewalEmail.Catchword);
+                        command.Parameters.AddWithValue("@Classes", renewalEmail.Classes);
+                        command.Parameters.AddWithValue("@ClassesDescription", renewalEmail.ClassesDescription);
+                        command.Parameters.AddWithValue("@TrademarkCategory", renewalEmail.TrademarkCategory);
+                        command.Parameters.AddWithValue("@DeviceFilePath", renewalEmail.DeviceFilePath);
+                        command.Parameters.AddWithValue("@DocumentsPath", renewalEmail.DocumentsPath);
+
+                        command.ExecuteNonQuery();
                     }
                     catch (Exception ex)
                     {
@@ -164,6 +186,66 @@ namespace EmailSender
                     }
                 }
             }
+        }
+
+        public void InsertPatriciaDocument(int CaseId, string DocName, string DocFileName)
+        {
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                using (SqlCommand command = new SqlCommand("sp_moe_0017_InsertDocLog", connection))
+                {
+                    try
+                    {
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.Parameters.AddWithValue("@CASE_ID", CaseId);
+                        command.Parameters.AddWithValue("@DOC_NAME", DocName);
+                        command.Parameters.AddWithValue("@DOC_FILE_NAME", DocFileName);
+                        command.ExecuteNonQuery();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                        throw ex;
+                    }
+                    finally
+                    {
+                        command.Dispose();
+                        connection.Close();
+                        connection.Dispose();
+                    }
+                }
+            }
+        }
+
+        private int SetProxEmailNumber()
+        {
+            int emailNumber;
+            using (SqlConnection connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                using (SqlCommand command = new SqlCommand("sp_moe_0019_SetProxEmailNumber", connection))
+                {
+                    try
+                    {
+                        command.CommandType = CommandType.StoredProcedure;
+                        emailNumber = Int32.Parse(command.ExecuteScalar().ToString());
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                        throw ex;
+                    }
+                    finally
+                    {
+                        command.Dispose();
+                        connection.Close();
+                        connection.Dispose();
+                    }
+                }
+
+            }
+            return emailNumber;
         }
     }
 }
