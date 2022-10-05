@@ -38,50 +38,55 @@ namespace EmailSender
                     lastReviewed = renewal;
                     sameEmailRenewalsList.Add(renewal);
                 }
-                //si no es la primer vuelta me fijo si corresponde al mismo mail.
-                else
+                
+                //si no es el ultimo de la lista
+                if (count != renewalsList.Count)
                 {
-                    //si no es el ultimo de la lista
-                    if (count != renewalsList.Count)
+                    //si pertenece al mismo mail que la renovacion anterior la meto en la lista.
+                    if ((lastReviewed.AgentNameId == renewal.AgentNameId) &&
+                            (lastReviewed.ApplicantNameId == renewal.ApplicantNameId) &&
+                                (lastReviewed.CountryName == renewal.CountryName))
                     {
-                        //si pertenece al mismo mail que la renovacion anterior la meto en la lista.
-                        if ((lastReviewed.AgentNameId == renewal.AgentNameId) &&
-                                (lastReviewed.ApplicantNameId == renewal.ApplicantNameId) &&
-                                    (lastReviewed.CountryName == renewal.CountryName))
+                        if (count != 1)
                         {
                             sameEmailRenewalsList.Add(renewal);
-                        }
-                        //si no va en el mismo email, mando el mail para la agrupacion anterior que hasta ahora nunca se mando, limpio la lista para agrupar por la nueva
-                        else
-                        {
-                            ValidationSendEmail(sameEmailRenewalsList, monthsBefore, templateRepository);
-                            sameEmailRenewalsList.Clear();
-                            sameEmailRenewalsList.Add(renewal);
-                            lastReviewed = renewal;
                         }
                     }
-                    //si es el ultimo de la lista
+                    //si no va en el mismo email, mando el mail para la agrupacion anterior que hasta ahora nunca se mando, limpio la lista para agrupar por la nueva
                     else
                     {
-                        //Si pertenece al mismo mail que la renovación anterior, la agrego a la lista y envio el mail ya que es la ultima renovacion.
-                        if ((lastReviewed.AgentNameId == renewal.AgentNameId) &&
-                            (lastReviewed.ApplicantNameId == renewal.ApplicantNameId) &&
-                            (lastReviewed.CountryName == renewal.CountryName))
+                        ValidationSendEmail(sameEmailRenewalsList, monthsBefore, templateRepository);
+                        sameEmailRenewalsList.Clear();
+                        sameEmailRenewalsList.Add(renewal);
+                        lastReviewed = renewal;
+                    }
+                }
+                //si es el ultimo de la lista
+                else
+                {
+                    //Si pertenece al mismo mail que la renovación anterior, la agrego a la lista y envio el mail ya que es la ultima renovacion.
+                    if ((lastReviewed.AgentNameId == renewal.AgentNameId) &&
+                        (lastReviewed.ApplicantNameId == renewal.ApplicantNameId) &&
+                        (lastReviewed.CountryName == renewal.CountryName))
+                    {
+                        //Si no es el primer y utlimo item a la misma vezlo agrego a la lista
+                        if (count != 1)
                         {
                             sameEmailRenewalsList.Add(renewal);
-                            ValidationSendEmail(sameEmailRenewalsList, monthsBefore, templateRepository);
                         }
-                        //Si no pertenece al mail anterior, envio el mail anterior y esta renovacion en un nuevo email, ya que es la ultima renovacion.
-                        else
-                        {
-                            //Mail anterior
-                            ValidationSendEmail(sameEmailRenewalsList, monthsBefore, templateRepository);
 
-                            //Nuevo mail con ultima renovacion
-                            List<RenewalDetail> listLastRenewal = new List<RenewalDetail>();
-                            listLastRenewal.Add(renewal);
-                            ValidationSendEmail(listLastRenewal, monthsBefore, templateRepository);
-                        }
+                        ValidationSendEmail(sameEmailRenewalsList, monthsBefore, templateRepository);
+                    }
+                    //Si no pertenece al mail anterior, envio el mail anterior y esta renovacion en un nuevo email, ya que es la ultima renovacion.
+                    else
+                    {
+                        //Mail anterior
+                        ValidationSendEmail(sameEmailRenewalsList, monthsBefore, templateRepository);
+
+                        //Nuevo mail con ultima renovacion
+                        List<RenewalDetail> listLastRenewal = new List<RenewalDetail>();
+                        listLastRenewal.Add(renewal);
+                        ValidationSendEmail(listLastRenewal, monthsBefore, templateRepository);
                     }
                 }
                 count++;
@@ -113,13 +118,10 @@ namespace EmailSender
 
             switch (renewalList[0].CorrespondenceAddressLanguageId)
             {
-                case 4:
-                    languageId = 4;
-                    break;
-                case 6:
+                case 6: // español 
                     languageId = 6;
                     break;
-                default:
+                default: // el resto en ingles
                     languageId = 3;
                     break;
             }
@@ -211,8 +213,8 @@ namespace EmailSender
                     message.To.Add(address);
                 }
 
-                //message.To.Add("gabriela.aparicio@moellerip.com");
-                message.Bcc.Add("pablo.aragon@moellerip.com");
+                //message.To.Add("pablo.aragon@moellerip.com");
+                //message.Bcc.Add("pablo.aragon@moellerip.com");
                 //message.To.Add("liliana.bajos@moellerip.com");
 
                 message.Subject = emailTemplate.SubjectText.Replace("{xx_Country}", countryName.ToUpper()).Replace("{xx_Applicant}", applicantName.ToUpper());
@@ -248,7 +250,7 @@ namespace EmailSender
                 }
 
                 smtp.Send(message);
-                
+
                 repository.LogEmailSent(renewalList, "SUCCESS", "El email fue enviado con exito.", emailTemplate.SubjectText.Replace("{xx_Country}", countryName.ToUpper()).Replace("{xx_Applicant}", applicantName.ToUpper()), emailFileName);
             }
             catch (Exception ex)

@@ -17,3 +17,4 @@ C:\MoellerCollection\EmailSenderRenewals\EmailSender\bin\Debug\EmailSender.pdb
 C:\MoellerCollection\EmailSenderRenewals\EmailSender\bin\Debug\Select.HtmlToPdf.dll
 C:\MoellerCollection\EmailSenderRenewals\EmailSender\bin\Debug\Select.HtmlToPdf.xml
 C:\MoellerCollection\EmailSenderRenewals\EmailSender\bin\Debug\Select.Html.dep
+C:\MoellerCollection\EmailSenderRenewals\EmailSender\obj\Debug\EmailSender.csproj.CopyComplete
