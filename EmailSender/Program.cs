@@ -99,6 +99,7 @@ namespace EmailSender
             return Encoding.Default.GetString(Convert.FromBase64String(Encoding.Default.GetString(Convert.FromBase64String(connectionCoded))));
         }
 
+        //Valido los datos de la lista a enviar el email
         private static void ValidationSendEmail(List<RenewalDetail> renewalList, int monthsBefore, EmailTemplateRepository repository)
         {
             string correspondenceAddressEmails = "";
@@ -129,7 +130,7 @@ namespace EmailSender
             EmailTemplate emailTemplate = repository.GetTemplate("EMAIL", languageId, countryId, monthsBefore);
             EmailTemplate attachTemplate = repository.GetTemplate("ATTACH", languageId);
 
-            Console.WriteLine("Templates obtenidos");
+            Console.WriteLine("Email Template: {0}", emailTemplate.TemplateName);
 
             if (correspondenceAddressEmails.Trim() != String.Empty)
             {

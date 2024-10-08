@@ -66,6 +66,7 @@ namespace EmailSender
         public List<RenewalDetail> GetRenewals(int pn_months)
         {
             List<RenewalDetail> renewalList = new List<RenewalDetail>();
+            string lastCaseNumber = "";
             using (SqlConnection connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
@@ -84,6 +85,7 @@ namespace EmailSender
                                 RenewalDetail renewal = new RenewalDetail();
                                 renewal.CaseId = (int)reader["CaseId"];
                                 renewal.CaseNumber = reader["CaseNumber"].ToString();
+                                lastCaseNumber = renewal.CaseNumber;
                                 renewal.YourReference = reader["YourReference"].ToString();
                                 renewal.AgentNameId = reader["AgentNameId"].ToString();
                                 renewal.AgentName = reader["AgentName"].ToString();
@@ -96,7 +98,6 @@ namespace EmailSender
                                 renewal.CorrespondenceAddressEmails = reader["CorrespondenceAddressEmails"] == DBNull.Value ? "" : reader["CorrespondenceAddressEmails"].ToString();
                                 renewal.CorrespondenceAddressLanguageId = int.Parse(reader["CorrespondenceAddressLanguageId"].ToString());
                                 renewal.NextRenewal = (DateTime)reader["NextRenewal"];
-                                renewal.RegistrationDate = (DateTime)reader["RegistrationDate"];
                                 renewal.ApplicationNumber = reader["ApplicationNumber"].ToString();
                                 renewal.RegistrationNumber = reader["RegistrationNumber"].ToString();
                                 renewal.Catchword = reader["Catchword"].ToString();
@@ -111,7 +112,7 @@ namespace EmailSender
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine(ex.Message);
+                        Console.WriteLine($"Error processing case number {lastCaseNumber}: {ex.Message}");
                     }
                     finally
                     {
@@ -161,7 +162,6 @@ namespace EmailSender
                         command.Parameters.AddWithValue("@CorrespondenceAddressEmails", renewalEmail.CorrespondenceAddressEmails);
                         command.Parameters.AddWithValue("@CorrespondenceAddressLanguageId", renewalEmail.CorrespondenceAddressLanguageId);
                         command.Parameters.AddWithValue("@NextRenewal", renewalEmail.NextRenewal);
-                        command.Parameters.AddWithValue("@RegistrationDate", renewalEmail.RegistrationDate);
                         command.Parameters.AddWithValue("@ApplicationNumber", renewalEmail.ApplicationNumber);
                         command.Parameters.AddWithValue("@RegistrationNumber", renewalEmail.RegistrationNumber);
                         command.Parameters.AddWithValue("@Catchword", renewalEmail.Catchword);

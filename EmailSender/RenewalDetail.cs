@@ -22,7 +22,6 @@ namespace EmailSender
         public string CorrespondenceAddressEmails { get; set; }
         public int CorrespondenceAddressLanguageId { get; set; }
         public DateTime NextRenewal { get; set; }
-        public DateTime RegistrationDate { get; set; }
         public string ApplicationNumber { get; set; }
         public string RegistrationNumber { get; set; }
         public string Catchword { get; set; }
