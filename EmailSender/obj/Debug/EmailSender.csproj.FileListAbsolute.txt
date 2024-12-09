@@ -18,3 +18,14 @@ C:\MoellerCollection\EmailSenderRenewals\EmailSender\bin\Debug\Select.HtmlToPdf.
 C:\MoellerCollection\EmailSenderRenewals\EmailSender\bin\Debug\Select.HtmlToPdf.xml
 C:\MoellerCollection\EmailSenderRenewals\EmailSender\bin\Debug\Select.Html.dep
 C:\MoellerCollection\EmailSenderRenewals\EmailSender\obj\Debug\EmailSender.csproj.CopyComplete
+C:\_Sources\EmailSender\obj\Debug\EmailSender.csproj.AssemblyReference.cache
+C:\_Sources\EmailSender\obj\Debug\EmailSender.csproj.CoreCompileInputs.cache
+C:\_Sources\EmailSender\obj\Debug\EmailSender.exe
+C:\_Sources\EmailSender\obj\Debug\EmailSender.pdb
+C:\_Sources\EmailSender\bin\Debug\EmailSender.exe.config
+C:\_Sources\EmailSender\bin\Debug\EmailSender.exe
+C:\_Sources\EmailSender\bin\Debug\EmailSender.pdb
+C:\_Sources\EmailSender\bin\Debug\Select.HtmlToPdf.dll
+C:\_Sources\EmailSender\bin\Debug\Select.HtmlToPdf.xml
+C:\_Sources\EmailSender\bin\Debug\Select.Html.dep
+C:\_Sources\EmailSender\obj\Debug\EmailSen.AE69708F.Up2Date

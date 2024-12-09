@@ -16,81 +16,84 @@ namespace EmailSender
     {
         static void Main(string[] args)
         {
-            int monthsBefore = Int32.Parse(args[0]);
-            //Creo la conexión a la base de datos.
-            EmailTemplateRepository templateRepository = new EmailTemplateRepository(GetConnection());
-            Console.WriteLine("La conexión ha sido exitosa.");
+            // Lista de valores de monthsBefore
+            int[] monthsBeforeValues = { 1, 3, 6 };
 
-            //Obtengo el lisato de renovaciones según el parametro indicado
-            List<RenewalDetail> renewalsList = templateRepository.GetRenewals(monthsBefore);
-
-            //Lista para agrupar las renovaciones que van en el mismo email
-            List<RenewalDetail> sameEmailRenewalsList = new List<RenewalDetail>();
-            RenewalDetail lastReviewed = null;
-            int count = 1;
-
-            //Agrupo las renovaciones que van en el mismo email de acuerdo a el CaseCountry, AgentNameId y ApplicantNameId
-            foreach (var renewal in renewalsList)
+            foreach (var monthsBefore in monthsBeforeValues)
             {
-                //si es la primer vuelta seteo al actual.
-                if (lastReviewed == null)
+                Console.WriteLine($"Inicio de procesamiento para monthsBefore = {monthsBefore}");
+
+                // Creo la conexión a la base de datos.
+                EmailTemplateRepository templateRepository = new EmailTemplateRepository(GetConnection());
+                Console.WriteLine("La conexión a la base de datos ha sido exitosa.");
+
+                // Obtengo el listado de renovaciones según el parámetro indicado
+                List<RenewalDetail> renewalsList = templateRepository.GetRenewals(monthsBefore);
+                Console.WriteLine($"Se encontraron {renewalsList.Count} renovaciones para monthsBefore = {monthsBefore}.");
+
+                // Lista para agrupar las renovaciones que van en el mismo email
+                List<RenewalDetail> sameEmailRenewalsList = new List<RenewalDetail>();
+                RenewalDetail lastReviewed = null;
+                int count = 1;
+
+                // Agrupo las renovaciones que van en el mismo email de acuerdo al CaseCountry, AgentNameId y ApplicantNameId
+                foreach (var renewal in renewalsList)
                 {
-                    lastReviewed = renewal;
-                    sameEmailRenewalsList.Add(renewal);
-                }
-                
-                //si no es el ultimo de la lista
-                if (count != renewalsList.Count)
-                {
-                    //si pertenece al mismo mail que la renovacion anterior la meto en la lista.
-                    if ((lastReviewed.AgentNameId == renewal.AgentNameId) &&
-                            (lastReviewed.ApplicantNameId == renewal.ApplicantNameId) &&
-                                (lastReviewed.CountryName == renewal.CountryName))
+                    if (lastReviewed == null)
                     {
-                        if (count != 1)
-                        {
-                            sameEmailRenewalsList.Add(renewal);
-                        }
-                    }
-                    //si no va en el mismo email, mando el mail para la agrupacion anterior que hasta ahora nunca se mando, limpio la lista para agrupar por la nueva
-                    else
-                    {
-                        ValidationSendEmail(sameEmailRenewalsList, monthsBefore, templateRepository);
-                        sameEmailRenewalsList.Clear();
-                        sameEmailRenewalsList.Add(renewal);
                         lastReviewed = renewal;
+                        sameEmailRenewalsList.Add(renewal);
                     }
-                }
-                //si es el ultimo de la lista
-                else
-                {
-                    //Si pertenece al mismo mail que la renovación anterior, la agrego a la lista y envio el mail ya que es la ultima renovacion.
-                    if ((lastReviewed.AgentNameId == renewal.AgentNameId) &&
-                        (lastReviewed.ApplicantNameId == renewal.ApplicantNameId) &&
-                        (lastReviewed.CountryName == renewal.CountryName))
-                    {
-                        //Si no es el primer y utlimo item a la misma vezlo agrego a la lista
-                        if (count != 1)
-                        {
-                            sameEmailRenewalsList.Add(renewal);
-                        }
 
-                        ValidationSendEmail(sameEmailRenewalsList, monthsBefore, templateRepository);
+                    if (count != renewalsList.Count)
+                    {
+                        if ((lastReviewed.AgentNameId == renewal.AgentNameId) &&
+                            (lastReviewed.ApplicantNameId == renewal.ApplicantNameId) &&
+                            (lastReviewed.CountryName == renewal.CountryName))
+                        {
+                            if (count != 1)
+                            {
+                                sameEmailRenewalsList.Add(renewal);
+                            }
+                        }
+                        else
+                        {
+                            ValidationSendEmail(sameEmailRenewalsList, monthsBefore, templateRepository);
+                            sameEmailRenewalsList.Clear();
+                            sameEmailRenewalsList.Add(renewal);
+                            lastReviewed = renewal;
+                        }
                     }
-                    //Si no pertenece al mail anterior, envio el mail anterior y esta renovacion en un nuevo email, ya que es la ultima renovacion.
                     else
                     {
-                        //Mail anterior
-                        ValidationSendEmail(sameEmailRenewalsList, monthsBefore, templateRepository);
+                        if ((lastReviewed.AgentNameId == renewal.AgentNameId) &&
+                            (lastReviewed.ApplicantNameId == renewal.ApplicantNameId) &&
+                            (lastReviewed.CountryName == renewal.CountryName))
+                        {
+                            if (count != 1)
+                            {
+                                sameEmailRenewalsList.Add(renewal);
+                            }
+                            ValidationSendEmail(sameEmailRenewalsList, monthsBefore, templateRepository);
+                        }
+                        else
+                        {
+                            ValidationSendEmail(sameEmailRenewalsList, monthsBefore, templateRepository);
 
-                        //Nuevo mail con ultima renovacion
-                        List<RenewalDetail> listLastRenewal = new List<RenewalDetail>();
-                        listLastRenewal.Add(renewal);
-                        ValidationSendEmail(listLastRenewal, monthsBefore, templateRepository);
+                            List<RenewalDetail> listLastRenewal = new List<RenewalDetail>();
+                            listLastRenewal.Add(renewal);
+                            ValidationSendEmail(listLastRenewal, monthsBefore, templateRepository);
+                        }
                     }
+                    count++;
                 }
-                count++;
+
+                Console.WriteLine($"Procesamiento para monthsBefore = {monthsBefore} completado.");
             }
+
+            // Indica que el programa ha finalizado y cierra
+            Console.WriteLine("Todos los procesos se han completado. Presiona cualquier tecla para salir.");
+            Console.ReadKey();
         }
 
         private static string GetConnection()
@@ -102,20 +105,14 @@ namespace EmailSender
         //Valido los datos de la lista a enviar el email
         private static void ValidationSendEmail(List<RenewalDetail> renewalList, int monthsBefore, EmailTemplateRepository repository)
         {
-            string correspondenceAddressEmails = "";
-            string agentName = "";
-            string applicantName = "";
-            string correspondenceAddressName = "";
-            string countryId = "";
-            string countryName = "";
-            int languageId = 0;
-
-            correspondenceAddressEmails = renewalList[0].CorrespondenceAddressEmails;
-            agentName = renewalList[0].AgentName;
-            applicantName = renewalList[0].ApplicantName;
-            correspondenceAddressName = renewalList[0].CorrespondenceAddressName;
-            countryId = renewalList[0].CountryId;
-            countryName = renewalList[0].CountryName;
+            // Variables inicializadas con valores predeterminados para manejar posibles nulls
+            string correspondenceAddressEmails = renewalList[0]?.CorrespondenceAddressEmails ?? "";
+            string agentName = renewalList[0]?.AgentName ?? "";
+            string applicantName = renewalList[0]?.ApplicantName ?? "";
+            string correspondenceAddressName = renewalList[0]?.CorrespondenceAddressName ?? "";
+            string countryId = renewalList[0]?.CountryId ?? "";
+            string countryName = renewalList[0]?.CountryName ?? "";
+            int languageId;
 
             switch (renewalList[0].CorrespondenceAddressLanguageId)
             {
@@ -127,22 +124,32 @@ namespace EmailSender
                     break;
             }
 
+            // Obtener las plantillas de email
             EmailTemplate emailTemplate = repository.GetTemplate("EMAIL", languageId, countryId, monthsBefore);
             EmailTemplate attachTemplate = repository.GetTemplate("ATTACH", languageId);
 
-            Console.WriteLine("Email Template: {0}", emailTemplate.TemplateName);
+            Console.WriteLine("Email Template: {0}", emailTemplate?.TemplateName ?? "No disponible");
 
-            if (correspondenceAddressEmails.Trim() != String.Empty)
+            // Validación de email
+            if (!string.IsNullOrWhiteSpace(correspondenceAddressEmails))
             {
+                // Llamada al método de envío de email
                 SendEmail(repository, emailTemplate, attachTemplate, renewalList, correspondenceAddressEmails, agentName, applicantName, correspondenceAddressName, countryName);
-                Console.WriteLine("Email enviado correctamente");
+                Console.WriteLine("Email enviado correctamente.");
             }
             else
             {
-                repository.LogEmailSent(renewalList, "EMPTY_EMAIL", "El email no puedo ser enviado. No hay dirección de email.", emailTemplate.SubjectText.Replace("{xx_Country}", countryName.ToUpper()).Replace("{xx_Applicant}", applicantName.ToUpper()));
-                Console.WriteLine("El email no puedo ser enviado. No hay dirección de email.");
+                // Log y mensaje para email vacío
+                repository.LogEmailSent(
+                    renewalList,
+                    "EMPTY_EMAIL",
+                    "El email no pudo ser enviado. No hay dirección de email.",
+                    emailTemplate?.SubjectText?.Replace("{xx_Country}", countryName.ToUpper()).Replace("{xx_Applicant}", applicantName.ToUpper()) ?? "Sin asunto"
+                );
+                Console.WriteLine("El email no pudo ser enviado. No hay dirección de email.");
             }
         }
+
 
 
         private static void SendEmail(EmailTemplateRepository repository,
